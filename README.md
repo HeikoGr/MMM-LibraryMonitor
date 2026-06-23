@@ -6,7 +6,7 @@ MagicMirror module to show which media are currently borrowed from the local lib
 
 ## Current scope
 
-This module currently focuses on OPEN-OPAC account overviews:
+This module currently focuses on OPAC account overviews:
 
 - account overview only
 - borrowed media and due dates only
@@ -14,14 +14,12 @@ This module currently focuses on OPEN-OPAC account overviews:
 - no profile management
 - no renewal workflow
 
-The backend is intentionally modeled after the module structure used in MMM-CalDAV-Tasks and MMM-Webuntis, while the account parsing follows the OPEN account scraper approach used by opacclient.
-
 ## Installation
 
 Clone the module into your MagicMirror modules directory:
 
 ```bash
-git clone https://github.com/HeikoGr/MMM-OPAC.git MMM-LibraryMonitor
+git clone https://github.com/HeikoGr/MMM-LibraryMonitor.git MMM-LibraryMonitor
 cd MMM-LibraryMonitor
 ```
 
@@ -31,20 +29,9 @@ Install dependencies inside the module folder:
 npm install
 ```
 
-For browser-based testing in the same style as the reference modules, this repository now also ships a `.devcontainer` setup that starts MagicMirror in `serveronly` mode under PM2.
-
 ## Configuration
 
-The module supports three ways to select the library configuration:
-
-1. Exact OPAC JSON file via `libraryConfigFile`
-2. Inline JSON object via `libraryConfig`
-
-For real-world setups, keeping the target OPAC host and account path directly in the module config via `libraryConfig` is recommended so the library-specific values stay visible in one place.
-
-Like the other MagicMirror modules, the primary setup path is now the central MagicMirror configuration file in [config/config.js](config/config.js). A template is provided in [config/config.template.js](config/config.template.js).
-
-Optional runtime overrides can also be supplied through [config/.env.template](config/.env.template) and [config/.env](config/.env). In particular, `MMM_LIBRARY_MONITOR_USERNAME` and `MMM_LIBRARY_MONITOR_PASSWORD` can override the values from the central config for local tests.
+Like the other MagicMirror modules, the primary setup path is the central MagicMirror configuration file in [config/config.js](config/config.js). A template is provided in [config/config.template.js](config/config.template.js).
 
 Minimal config:
 
@@ -166,42 +153,6 @@ node --run lint
 
 Restart MagicMirror after the update so the new backend code is loaded.
 
-## Browser Test With PM2
-
-The repository now includes the same basic PM2/devcontainer system used in the reference projects:
-
-- [.devcontainer/devcontainer.json](.devcontainer/devcontainer.json)
-- [.devcontainer/Dockerfile](.devcontainer/Dockerfile)
-- [.devcontainer/entrypoint.sh](.devcontainer/entrypoint.sh)
-- [.devcontainer/ecosystem.config.js](.devcontainer/ecosystem.config.js)
-- [.vscode/tasks.json](.vscode/tasks.json)
-- [scripts/live-account-fetch.js](scripts/live-account-fetch.js)
-- [scripts/require-devcontainer.sh](scripts/require-devcontainer.sh)
-
-Behavior:
-
-- `config/config.js` is linked into the MagicMirror root config path.
-- `config/custom.css` is linked into the MagicMirror root CSS path.
-- `config/.env` is linked into the MagicMirror root and sourced during container startup.
-- PM2 starts `/opt/magic_mirror/serveronly/index.js` on port `8080`.
-- The browser target is `http://localhost:8080` when the devcontainer is running.
-
-Useful tasks:
-
-- `pm2: restart all`
-- `pm2: logs (follow)`
-- `pm2: restart & logs (clean)`
-- `mmm-librarymonitor: live account fetch`
-- `npm: test`
-
-For a direct backend-only live check without opening the browser, run:
-
-```bash
-node --run debug:live
-```
-
-If you open this repository in the devcontainer, the startup flow mirrors the reference repositories: dependencies install, MagicMirror config is validated, and PM2 launches the server automatically.
-
 ## Options
 
 | Option | Type | Default | Description |
@@ -232,4 +183,4 @@ If you open this repository in the devcontainer, the startup flow mirrors the re
 - When `accounts` is used, each account is rendered in its own section with its own summary and loan list.
 - The default UI is read-only and suppresses OPAC notices such as renewal prompts unless `showNotices` is enabled.
 - Frontend strings are localized via the translation files. The module's own backend errors are emitted as plain English strings. Raw validation messages returned by the remote OPAC are shown as-is.
-- Renewals are intentionally not exposed in this first version, even though the upstream OPAC system contains the necessary account mechanisms.
+- Renewals are intentionally not exposed in this version.
