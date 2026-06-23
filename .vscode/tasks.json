@@ -1,0 +1,132 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "pm2: restart all",
+      "type": "shell",
+      "command": "/bin/sh",
+      "args": [
+        "./scripts/require-devcontainer.sh",
+        "pm2",
+        "restart",
+        "all"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "pm2: logs (follow)",
+      "type": "shell",
+      "command": "/bin/sh",
+      "args": [
+        "./scripts/require-devcontainer.sh",
+        "pm2",
+        "logs",
+        "--lines",
+        "200"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "pm2: restart & logs (clean)",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "pm2: restart & clean",
+        "pm2: logs (follow)"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "pm2: restart & clean",
+      "type": "shell",
+      "command": "/bin/sh",
+      "args": [
+        "./scripts/require-devcontainer.sh",
+        "bash",
+        "-lc",
+        "pm2 restart all && pm2 flush"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true,
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "mmm-librarymonitor: live account fetch",
+      "type": "shell",
+      "command": "node",
+      "args": [
+        "scripts/live-account-fetch.js"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: test",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "test"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: install",
+      "type": "shell",
+      "command": "npm",
+      "args": [
+        "install"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

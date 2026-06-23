@@ -1,0 +1,111 @@
+#!/bin/sh
+
+set -e
+
+MAGICMIRROR_PATH="/opt/magic_mirror"
+MODULES_DIR="${MAGICMIRROR_PATH}/modules/"
+MODULE_DIR="${MAGICMIRROR_PATH}/modules/MMM-OPAC"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+create_symlink() {
+  local source=$1
+  local target=$2
+  local name=$3
+
+  if [ -f "$source" ]; then
+    if [ -e "$target" ] && [ ! -L "$target" ]; then
+      mv "$target" "${target}.bak" || true
+      echo "→ Backed up existing $target to ${target}.bak"
+    fi
+
+    [ -L "$target" ] && rm -f "$target"
+
+    if ln -s "$source" "$target"; then
+      echo "✓ Symlink: $name"
+    else
+      echo "✗ Failed to create symlink: $name" >&2
+    fi
+  fi
+}
+
+copy_from_template() {
+  local target=$1
+  local template=$2
+  local name=$3
+
+  if [ ! -f "$target" ] && [ -f "$template" ]; then
+    cp "$template" "$target"
+    sed -i 's/\r$//' "$target" 2>/dev/null || true
+    echo "✓ Created: $name (from template)"
+  fi
+}
+
+ln -s "$MAGICMIRROR_PATH" "/opt/magicmirror" 2>/dev/null || true
+
+copy_from_template "${MODULE_DIR}/config/config.js" "${MODULE_DIR}/config/config.template.js" "config.js"
+copy_from_template "${MODULE_DIR}/config/custom.css" "${MODULE_DIR}/config/custom.template.css" "custom.css"
+copy_from_template "${MODULE_DIR}/config/.env" "${MODULE_DIR}/config/.env.template" ".env"
+
+mkdir -p "${MAGICMIRROR_PATH}/config" "${MAGICMIRROR_PATH}/css"
+
+create_symlink "${MODULE_DIR}/config/config.js" "${MAGICMIRROR_PATH}/config/config.js" "config.js"
+create_symlink "${MODULE_DIR}/config/custom.css" "${MAGICMIRROR_PATH}/config/custom.css" "custom.css"
+create_symlink "${MODULE_DIR}/config/.env" "${MAGICMIRROR_PATH}/.env" ".env"
+
+ENV_FILE="${MAGICMIRROR_PATH}/.env"
+if [ -f "$ENV_FILE" ]; then
+  sed -i 's/\r$//' "$ENV_FILE" 2>/dev/null || true
+  set -a
+  . "$ENV_FILE"
+  set +a
+fi
+
+echo "${GREEN}=== MagicMirror Startup (module devcontainer) ===${NC}"
+if [ -d "${MODULES_DIR}" ]; then
+  for MOD in "${MODULES_DIR}"/*; do
+    if [ -f "$MOD/package.json" ]; then
+      if [ ! -d "$MOD/node_modules" ] || [ -z "$(ls -A "$MOD/node_modules" 2>/dev/null)" ]; then
+        echo "${YELLOW}Installing dependencies: $(basename "$MOD")${NC}"
+        npm --prefix "$MOD" install --no-audit --no-fund || true
+      fi
+    fi
+  done
+fi
+
+echo "${GREEN}Validating MagicMirror configuration...${NC}"
+CONFIG_FILE="${MAGICMIRROR_PATH}/config/config.js"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "${RED}ERROR: Config file not found: $CONFIG_FILE${NC}"
+  echo "${YELLOW}Please create a config.js file. You can copy from config.template.js${NC}"
+  exec /bin/sh
+fi
+
+node -e "try { require('$CONFIG_FILE'); console.log('Config OK'); } catch(e) { console.error('CONFIG ERROR:', e.message); process.exit(1); }" 2>&1 || {
+  CONFIG_EXIT=$?
+  echo "${RED}ERROR: Configuration validation failed (exit code: $CONFIG_EXIT)${NC}"
+  echo "${YELLOW}Check your config.js file for syntax errors.${NC}"
+  exec /bin/sh
+}
+
+cd "$MAGICMIRROR_PATH"
+echo "${GREEN}Starting MagicMirror under PM2...${NC}"
+
+if command -v pm2-runtime >/dev/null 2>&1; then
+  exec pm2-runtime start /opt/magic_mirror/ecosystem.config.js --error /tmp/pm2-error.log || {
+    PM2_EXIT=$?
+    echo "${RED}ERROR: PM2 failed to start (exit code: $PM2_EXIT)${NC}"
+    if [ -f /tmp/pm2-error.log ]; then
+      echo "${RED}PM2 Error Log:${NC}"
+      cat /tmp/pm2-error.log
+    fi
+    exec /bin/sh
+  }
+else
+  echo "${RED}Error: pm2-runtime not found${NC}"
+  exec /bin/sh
+fi

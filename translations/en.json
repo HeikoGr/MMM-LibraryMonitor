@@ -1,0 +1,17 @@
+{
+  "LOADING": "Loading library account ...",
+  "NO_DATA": "No library data loaded yet.",
+  "NO_ITEMS": "No borrowed media found.",
+  "ACCOUNT_COUNT": "{count} accounts",
+  "VISIBLE_ACCOUNT_COUNT": "{visibleCount} of {totalCount} accounts",
+  "ACCOUNT_ERRORS": "{count} errors",
+  "ACCOUNT_LABEL_FALLBACK": "Account {count}",
+  "ACCOUNT_META": "Account: {label}",
+  "ITEM_COUNT": "{count} loans",
+  "FEES": "Fees: {fees}",
+  "VALID_UNTIL": "Card valid until {date}",
+  "UNKNOWN_DATE": "no due date",
+  "OVERDUE_ON": "overdue since {date}",
+  "DUE_TODAY": "due today ({date})",
+  "MORE_ITEMS": "+{count} more"
+}

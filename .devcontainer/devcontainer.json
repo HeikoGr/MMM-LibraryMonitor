@@ -1,0 +1,37 @@
+{
+  "name": "MMM-LibraryMonitor (MagicMirror Dev)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "workspaceFolder": "/opt/magic_mirror/modules/MMM-OPAC",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/opt/magic_mirror/modules/MMM-OPAC,type=bind",
+  "overrideCommand": false,
+  "runArgs": [
+    "--shm-size=1g"
+  ],
+  "shutdownAction": "stopContainer",
+  "remoteUser": "root",
+  "containerEnv": {
+    "IN_DEVCONTAINER": "1"
+  },
+  "forwardPorts": [
+    8080
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "actboy168.tasks",
+        "biomejs.biome",
+        "vstirbu.vscode-mermaid-preview"
+      ],
+      "settings": {
+        "chat.mcp.autoStart": true,
+        "editor.formatOnSave": true,
+        "files.trimTrailingWhitespace": true
+      }
+    }
+  },
+  "postCreateCommand": "/bin/sh .devcontainer/postCreate.sh",
+  "postStartCommand": "echo 'Devcontainer started. MagicMirror at http://localhost:8080'"
+}

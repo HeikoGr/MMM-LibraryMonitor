@@ -1,0 +1,116 @@
+.mmm-library-monitor {
+  max-width: 420px;
+}
+
+.mmm-library-monitor__account {
+  margin-bottom: 0.95rem;
+  padding-bottom: 0.15rem;
+}
+
+.mmm-library-monitor__account--separated {
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.mmm-library-monitor__account-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.35rem;
+}
+
+.mmm-library-monitor__account-header {
+  font-size: 0.95em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.mmm-library-monitor__summary,
+.mmm-library-monitor__warning,
+.mmm-library-monitor__empty,
+.mmm-library-monitor__more {
+  margin-bottom: 0.45rem;
+}
+
+.mmm-library-monitor__account-error {
+  color: #ff7b72;
+  margin-bottom: 0.45rem;
+}
+
+.mmm-library-monitor__account-summary {
+  font-size: 0.82em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mmm-library-monitor__warning {
+  color: #f2c46d;
+}
+
+.mmm-library-monitor__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mmm-library-monitor__row td {
+  padding: 0.28rem 0;
+  vertical-align: top;
+}
+
+.mmm-library-monitor__title {
+  padding-right: 1.75rem;
+  text-align: left;
+}
+
+.mmm-library-monitor__title-text {
+  line-height: 1.25;
+  text-align: left;
+}
+
+.mmm-library-monitor__title-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  text-align: left;
+}
+
+.mmm-library-monitor__title-copy {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.mmm-library-monitor__cover {
+  width: 32px;
+  min-width: 32px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mmm-library-monitor__meta {
+  font-size: 0.8em;
+  line-height: 1.2;
+  margin-top: 0.1rem;
+  text-align: left;
+}
+
+.mmm-library-monitor__due {
+  white-space: nowrap;
+  text-align: right;
+  padding-left: 0.75rem;
+}
+
+.mmm-library-monitor__row--soon .mmm-library-monitor__due {
+  color: #f2c46d;
+}
+
+.mmm-library-monitor__row--overdue .mmm-library-monitor__due,
+.mmm-library-monitor--error {
+  color: #ff7b72;
+}

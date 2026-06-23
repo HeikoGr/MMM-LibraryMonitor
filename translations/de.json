@@ -1,0 +1,17 @@
+{
+  "LOADING": "Bibliothekskonto wird geladen ...",
+  "NO_DATA": "Noch keine Bibliotheksdaten vorhanden.",
+  "NO_ITEMS": "Derzeit sind keine ausgeliehenen Medien vorhanden.",
+  "ACCOUNT_COUNT": "{count} Konten",
+  "VISIBLE_ACCOUNT_COUNT": "{visibleCount} von {totalCount} Konten",
+  "ACCOUNT_ERRORS": "{count} Fehler",
+  "ACCOUNT_LABEL_FALLBACK": "Konto {count}",
+  "ACCOUNT_META": "Konto: {label}",
+  "ITEM_COUNT": "{count} Ausleihen",
+  "FEES": "Gebühren: {fees}",
+  "VALID_UNTIL": "Ausweis gültig bis {date}",
+  "UNKNOWN_DATE": "ohne Frist",
+  "OVERDUE_ON": "überfällig seit {date}",
+  "DUE_TODAY": "heute fällig ({date})",
+  "MORE_ITEMS": "+{count} weitere"
+}
