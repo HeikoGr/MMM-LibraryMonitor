@@ -1,6 +1,8 @@
 # MMM-LibraryMonitor
 
-![MMM-LibraryMonitor preview](preview.svg)
+## Preview
+
+![MMM-LibraryMonitor preview](preview.png)
 
 MagicMirror module to show which media are currently borrowed from the local library OPAC account and when they are due.
 
