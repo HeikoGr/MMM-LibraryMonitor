@@ -4,7 +4,7 @@ set -e
 
 MAGICMIRROR_PATH="/opt/magic_mirror"
 MODULES_DIR="${MAGICMIRROR_PATH}/modules/"
-MODULE_DIR="${MAGICMIRROR_PATH}/modules/MMM-OPAC"
+MODULE_DIR="${MAGICMIRROR_PATH}/modules/MMM-LibraryMonitor"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
