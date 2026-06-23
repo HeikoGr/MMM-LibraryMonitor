@@ -4,8 +4,8 @@
     "dockerfile": "Dockerfile",
     "context": "."
   },
-  "workspaceFolder": "/opt/magic_mirror/modules/MMM-OPAC",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/opt/magic_mirror/modules/MMM-OPAC,type=bind",
+  "workspaceFolder": "/opt/magic_mirror/modules/MMM-LibraryMonitor",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/opt/magic_mirror/modules/MMM-LibraryMonitor,type=bind",
   "overrideCommand": false,
   "runArgs": ["--shm-size=1g"],
   "shutdownAction": "stopContainer",
