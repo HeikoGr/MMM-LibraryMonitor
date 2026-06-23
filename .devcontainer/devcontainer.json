@@ -7,17 +7,13 @@
   "workspaceFolder": "/opt/magic_mirror/modules/MMM-OPAC",
   "workspaceMount": "source=${localWorkspaceFolder},target=/opt/magic_mirror/modules/MMM-OPAC,type=bind",
   "overrideCommand": false,
-  "runArgs": [
-    "--shm-size=1g"
-  ],
+  "runArgs": ["--shm-size=1g"],
   "shutdownAction": "stopContainer",
   "remoteUser": "root",
   "containerEnv": {
     "IN_DEVCONTAINER": "1"
   },
-  "forwardPorts": [
-    8080
-  ],
+  "forwardPorts": [8080],
   "customizations": {
     "vscode": {
       "extensions": [

@@ -1,5 +1,7 @@
 # MMM-LibraryMonitor
 
+![MMM-LibraryMonitor preview](preview.svg)
+
 MagicMirror module to show which media are currently borrowed from the local library OPAC account and when they are due.
 
 ## Current scope
@@ -15,6 +17,13 @@ This module currently focuses on OPEN-OPAC account overviews:
 The backend is intentionally modeled after the module structure used in MMM-CalDAV-Tasks and MMM-Webuntis, while the account parsing follows the OPEN account scraper approach used by opacclient.
 
 ## Installation
+
+Clone the module into your MagicMirror modules directory:
+
+```bash
+git clone https://github.com/HeikoGr/MMM-OPAC.git MMM-LibraryMonitor
+cd MMM-LibraryMonitor
+```
 
 Install dependencies inside the module folder:
 
@@ -50,13 +59,13 @@ Minimal config:
 				baseurl: "https://bibliotheken.komm.one/mannheim/de-de",
 				customssl: true,
 				urls: {
-					account: "Mein-Konto"
-				}
-			}
+					account: "Mein-Konto",
+				},
+			},
 		},
 		username: "12345678",
-		password: "geheim"
-	}
+		password: "geheim",
+	},
 }
 ```
 
@@ -74,26 +83,26 @@ Example with multiple accounts:
 				baseurl: "https://bibliotheken.komm.one/mannheim/de-de",
 				customssl: true,
 				urls: {
-					account: "Mein-Konto"
-				}
-			}
+						account: "Mein-Konto",
+					},
+				},
 		},
 		accounts: [
 			{
 				label: "Kind 1",
 				username: "12345678",
-				password: "geheim-1"
+					password: "geheim-1",
 			},
 			{
 				label: "Kind 2",
 				username: "87654321",
-				password: "geheim-2"
+					password: "geheim-2",
 			},
 			{
 				label: "Eltern",
 				username: "11223344",
-				password: "geheim-3"
-			}
+					password: "geheim-3",
+				},
 		],
 		updateInterval: 15 * 60 * 1000,
 		maxItems: 8,
@@ -103,8 +112,8 @@ Example with multiple accounts:
 		showFees: true,
 		showValidUntil: true,
 		showNotices: false,
-		hideEmptyAccounts: false
-	}
+			hideEmptyAccounts: false,
+		},
 }
 ```
 
@@ -121,13 +130,13 @@ Single-account configuration remains valid:
 				baseurl: "https://bibliotheken.komm.one/mannheim/de-de",
 				customssl: true,
 				urls: {
-					account: "Mein-Konto"
-				}
-			}
+					account: "Mein-Konto",
+				},
+			},
 		},
 		username: "12345678",
-		password: "geheim"
-	}
+		password: "geheim",
+	},
 }
 ```
 
@@ -140,10 +149,22 @@ If you want to use an external OPAC JSON file directly, you can point to it with
 	config: {
 		libraryConfigFile: "config/bibs/meine-bibliothek.json",
 		username: "12345678",
-		password: "geheim"
-	}
+		password: "geheim",
+	},
 }
 ```
+
+## Update
+
+To update an existing installation, run the following inside the module directory:
+
+```bash
+git pull
+npm install
+node --run lint
+```
+
+Restart MagicMirror after the update so the new backend code is loaded.
 
 ## Browser Test With PM2
 
@@ -176,7 +197,7 @@ Useful tasks:
 For a direct backend-only live check without opening the browser, run:
 
 ```bash
-npm run debug:live
+node --run debug:live
 ```
 
 If you open this repository in the devcontainer, the startup flow mirrors the reference repositories: dependencies install, MagicMirror config is validated, and PM2 launches the server automatically.

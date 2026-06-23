@@ -5,12 +5,7 @@
       "label": "pm2: restart all",
       "type": "shell",
       "command": "/bin/sh",
-      "args": [
-        "./scripts/require-devcontainer.sh",
-        "pm2",
-        "restart",
-        "all"
-      ],
+      "args": ["./scripts/require-devcontainer.sh", "pm2", "restart", "all"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -48,10 +43,7 @@
     {
       "label": "pm2: restart & logs (clean)",
       "dependsOrder": "sequence",
-      "dependsOn": [
-        "pm2: restart & clean",
-        "pm2: logs (follow)"
-      ],
+      "dependsOn": ["pm2: restart & clean", "pm2: logs (follow)"],
       "problemMatcher": []
     },
     {
@@ -80,9 +72,7 @@
       "label": "mmm-librarymonitor: live account fetch",
       "type": "shell",
       "command": "node",
-      "args": [
-        "scripts/live-account-fetch.js"
-      ],
+      "args": ["scripts/live-account-fetch.js"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -98,9 +88,7 @@
       "label": "npm: test",
       "type": "shell",
       "command": "npm",
-      "args": [
-        "test"
-      ],
+      "args": ["test"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -115,9 +103,7 @@
       "label": "npm: install",
       "type": "shell",
       "command": "npm",
-      "args": [
-        "install"
-      ],
+      "args": ["install"],
       "options": {
         "cwd": "${workspaceFolder}"
       },

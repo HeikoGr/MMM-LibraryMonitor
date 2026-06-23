@@ -117,7 +117,9 @@ Module.register("MMM-LibraryMonitor", {
       return wrapper;
     }
 
-    const accounts = Array.isArray(this.accountData.accounts) ? this.accountData.accounts : [];
+    const accounts = Array.isArray(this.accountData.accounts)
+      ? this.accountData.accounts
+      : [];
     if (accounts.length === 0) {
       wrapper.classList.add("dimmed", "light", "small");
       wrapper.textContent = this.translate("NO_DATA");
@@ -125,16 +127,27 @@ Module.register("MMM-LibraryMonitor", {
     }
 
     const visibleAccounts = this.config.hideEmptyAccounts
-      ? accounts.filter((account) => account.error || (Array.isArray(account.items) && account.items.length > 0))
+      ? accounts.filter(
+          (account) =>
+            account.error ||
+            (Array.isArray(account.items) && account.items.length > 0),
+        )
       : accounts;
 
     const summary = document.createElement("div");
     summary.className = "mmm-library-monitor__summary small light";
-    summary.textContent = this.buildOverallSummaryText(visibleAccounts, accounts);
+    summary.textContent = this.buildOverallSummaryText(
+      visibleAccounts,
+      accounts,
+    );
     wrapper.appendChild(summary);
 
-    const accountSections = visibleAccounts.map((account, index) => this.createAccountSection(account, index));
-    const hasAnyItems = accounts.some((account) => Array.isArray(account.items) && account.items.length > 0);
+    const accountSections = visibleAccounts.map((account, index) =>
+      this.createAccountSection(account, index),
+    );
+    const hasAnyItems = accounts.some(
+      (account) => Array.isArray(account.items) && account.items.length > 0,
+    );
 
     if (!hasAnyItems) {
       const empty = document.createElement("div");
@@ -144,7 +157,9 @@ Module.register("MMM-LibraryMonitor", {
       return wrapper;
     }
 
-    accountSections.forEach((section) => wrapper.appendChild(section));
+    accountSections.forEach((section) => {
+      wrapper.appendChild(section);
+    });
 
     return wrapper;
   },
@@ -162,14 +177,20 @@ Module.register("MMM-LibraryMonitor", {
 
     const label = document.createElement("div");
     label.className = "mmm-library-monitor__account-header bright";
-    label.textContent = account.label || this.translate("ACCOUNT_LABEL_FALLBACK", {
-      count: index + 1,
-    });
+    label.textContent =
+      account.label ||
+      this.translate("ACCOUNT_LABEL_FALLBACK", {
+        count: index + 1,
+      });
     headerRow.appendChild(label);
 
     const summary = document.createElement("div");
-    summary.className = account.error ? "mmm-library-monitor__account-error small" : "mmm-library-monitor__account-summary light";
-    summary.textContent = account.error ? this.resolveErrorMessage(account.error) : this.buildAccountSummaryText(account);
+    summary.className = account.error
+      ? "mmm-library-monitor__account-error small"
+      : "mmm-library-monitor__account-summary light";
+    summary.textContent = account.error
+      ? this.resolveErrorMessage(account.error)
+      : this.buildAccountSummaryText(account);
     headerRow.appendChild(summary);
     section.appendChild(headerRow);
 
@@ -300,7 +321,9 @@ Module.register("MMM-LibraryMonitor", {
       parts.push(this.translate("ACCOUNT_COUNT", { count: accounts.length }));
     }
 
-    parts.push(this.translate("ITEM_COUNT", { count: this.accountData.totalItems || 0 }));
+    parts.push(
+      this.translate("ITEM_COUNT", { count: this.accountData.totalItems || 0 }),
+    );
 
     const errorCount = accounts.filter((account) => account.error).length;
     if (errorCount > 0) {

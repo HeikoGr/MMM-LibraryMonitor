@@ -21,7 +21,10 @@ test("resolveLibraryConfig returns the inline config object", () => {
   });
 
   assert.equal(libraryConfig.api, "open");
-  assert.equal(libraryConfig.data.baseurl, "https://bibliotheken.komm.one/mannheim/de-de");
+  assert.equal(
+    libraryConfig.data.baseurl,
+    "https://bibliotheken.komm.one/mannheim/de-de",
+  );
   assert.equal(libraryConfig.data.urls.account, "Mein-Konto");
 });
 

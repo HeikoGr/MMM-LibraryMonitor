@@ -2,15 +2,21 @@ const config = require("../config/config.js");
 const { fetchAccountData } = require("../lib/opac-client");
 
 function resolveModuleConfig() {
-  const moduleEntry = config.modules.find((entry) => entry.module === "MMM-LibraryMonitor");
-  if (!moduleEntry || !moduleEntry.config) {
-    throw new Error("MMM-LibraryMonitor module configuration not found in config/config.js.");
+  const moduleEntry = config.modules.find(
+    (entry) => entry.module === "MMM-LibraryMonitor",
+  );
+  if (!moduleEntry?.config) {
+    throw new Error(
+      "MMM-LibraryMonitor module configuration not found in config/config.js.",
+    );
   }
 
   return {
     ...moduleEntry.config,
-    username: process.env.MMM_LIBRARY_MONITOR_USERNAME || moduleEntry.config.username,
-    password: process.env.MMM_LIBRARY_MONITOR_PASSWORD || moduleEntry.config.password,
+    username:
+      process.env.MMM_LIBRARY_MONITOR_USERNAME || moduleEntry.config.username,
+    password:
+      process.env.MMM_LIBRARY_MONITOR_PASSWORD || moduleEntry.config.password,
   };
 }
 
@@ -21,22 +27,22 @@ async function main() {
     totalItems: accountData.totalItems,
     accounts: Array.isArray(accountData.accounts)
       ? accountData.accounts.map((account) => ({
-        label: account.label || null,
-        error: account.error || null,
-        totalItems: account.totalItems,
-        pendingFees: account.pendingFees,
-        validUntil: account.validUntil,
-        warning: account.warning || null,
-        items: Array.isArray(account.items)
-          ? account.items.slice(0, 5).map((item) => ({
-            title: item.title,
-            coverImageUrl: item.coverImageUrl || null,
-            dueDate: item.dueDate,
-            branch: item.branch,
-            isOverdue: item.isOverdue,
-          }))
-          : [],
-      }))
+          label: account.label || null,
+          error: account.error || null,
+          totalItems: account.totalItems,
+          pendingFees: account.pendingFees,
+          validUntil: account.validUntil,
+          warning: account.warning || null,
+          items: Array.isArray(account.items)
+            ? account.items.slice(0, 5).map((item) => ({
+                title: item.title,
+                coverImageUrl: item.coverImageUrl || null,
+                dueDate: item.dueDate,
+                branch: item.branch,
+                isOverdue: item.isOverdue,
+              }))
+            : [],
+        }))
       : [],
   };
 
@@ -45,7 +51,7 @@ async function main() {
 
 if (require.main === module) {
   main().catch((error) => {
-    console.error(error && error.stack ? error.stack : String(error));
+    console.error(error?.stack ? error.stack : String(error));
     process.exit(1);
   });
 }
