@@ -21,7 +21,7 @@ This module currently focuses on OPAC account overviews:
 Clone the module into your MagicMirror modules directory:
 
 ```bash
-git clone https://github.com/HeikoGr/MMM-LibraryMonitor.git MMM-LibraryMonitor
+git clone https://github.com/HeikoGr/MMM-LibraryMonitor
 cd MMM-LibraryMonitor
 ```
 

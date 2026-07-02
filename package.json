@@ -2,13 +2,13 @@
   "name": "mmm-librarymonitor",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HeikoGr/MMM-OPAC.git"
+    "url": "git+https://github.com/HeikoGr/MMM-LibraryMonitor.git"
   },
   "bugs": {
-    "url": "https://github.com/HeikoGr/MMM-OPAC/issues"
+    "url": "https://github.com/HeikoGr/MMM-LibraryMonitor/issues"
   },
-  "homepage": "https://github.com/HeikoGr/MMM-OPAC#readme",
-  "version": "0.1.0",
+  "homepage": "https://github.com/HeikoGr/MMM-LibraryMonitor#readme",
+  "version": "0.1.1",
   "description": "MagicMirror module to display borrowed media and due dates from library OPAC accounts.",
   "main": "MMM-LibraryMonitor.js",
   "type": "commonjs",
@@ -40,9 +40,9 @@
     "cheerio": "^1.2.0",
     "fetch-cookie": "^3.2.0",
     "tough-cookie": "^6.0.1",
-    "undici": "^8.5.0"
+    "undici": "^8.6.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.1"
+    "@biomejs/biome": "^2.5.2"
   }
 }
