@@ -36,6 +36,12 @@
   margin-bottom: 0.45rem;
 }
 
+.mmm-library-monitor__subsection-label {
+  margin: 0.55rem 0 0.2rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .mmm-library-monitor__account-error {
   color: #ff7b72;
   margin-bottom: 0.45rem;
@@ -93,10 +99,22 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+.mmm-library-monitor__cover--placeholder {
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .mmm-library-monitor__meta {
   font-size: 0.8em;
   line-height: 1.2;
   margin-top: 0.1rem;
+  text-align: left;
+}
+
+.mmm-library-monitor__status {
+  font-size: 0.78em;
+  line-height: 1.2;
+  margin-top: 0.12rem;
   text-align: left;
 }
 

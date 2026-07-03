@@ -12,6 +12,7 @@ This module currently focuses on OPAC account overviews:
 
 - account overview only
 - borrowed media and due dates only
+- reservations from the account overview
 - no media search
 - no profile management
 - no renewal workflow
@@ -176,6 +177,7 @@ Restart MagicMirror after the update so the new backend code is loaded.
 | `showValidUntil` | boolean | `true` | Show card validity in the summary line. |
 | `showNotices` | boolean | `false` | Show informational account notices from the OPAC page. |
 | `hideEmptyAccounts` | boolean | `false` | Hide accounts that currently have no borrowed media and no error. |
+| `debug` | boolean | `false` | Write lightweight backend debug logs for update cycles and loaded account summaries. |
 | `dateLocale` | string | `"de-DE"` | Locale used for due-date formatting in the frontend. |
 | `urgencyThresholdDays` | number | `3` | Highlight items due soon. |
 

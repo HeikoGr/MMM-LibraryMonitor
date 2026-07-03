@@ -54,6 +54,7 @@ const config = {
         showNotices: false,
         showBookCovers: true,
         hideEmptyAccounts: false,
+        debug: false,
         dateLocale: "de-DE",
         urgencyThresholdDays: 3,
       },

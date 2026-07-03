@@ -1,5 +1,9 @@
 /* global Module */
 
+const PLACEHOLDER_COVER_URL = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 46"><rect width="32" height="46" rx="3" fill="#202632"/><rect x="5" y="6" width="22" height="34" rx="2" fill="#425064"/><rect x="8" y="6" width="2" height="34" rx="1" fill="#d8b36a"/><path d="M12 15h10M12 20h10M12 25h7" stroke="#dce4f0" stroke-width="1.5" stroke-linecap="round"/></svg>',
+)}`;
+
 Module.register("MMM-LibraryMonitor", {
   defaults: {
     libraryConfig: null,
@@ -17,6 +21,7 @@ Module.register("MMM-LibraryMonitor", {
     showNotices: false,
     showBookCovers: true,
     hideEmptyAccounts: false,
+    debug: false,
     dateLocale: "de-DE",
     urgencyThresholdDays: 3,
   },
@@ -128,10 +133,12 @@ Module.register("MMM-LibraryMonitor", {
 
     const visibleAccounts = this.config.hideEmptyAccounts
       ? accounts.filter(
-          (account) =>
-            account.error ||
-            (Array.isArray(account.items) && account.items.length > 0),
-        )
+        (account) =>
+          account.error ||
+          (Array.isArray(account.items) && account.items.length > 0) ||
+          (Array.isArray(account.reservations) &&
+            account.reservations.length > 0),
+      )
       : accounts;
 
     const summary = document.createElement("div");
@@ -146,7 +153,9 @@ Module.register("MMM-LibraryMonitor", {
       this.createAccountSection(account, index),
     );
     const hasAnyItems = accounts.some(
-      (account) => Array.isArray(account.items) && account.items.length > 0,
+      (account) =>
+        (Array.isArray(account.items) && account.items.length > 0) ||
+        (Array.isArray(account.reservations) && account.reservations.length > 0),
     );
 
     if (!hasAnyItems) {
@@ -205,7 +214,12 @@ Module.register("MMM-LibraryMonitor", {
       section.appendChild(notice);
     }
 
-    if (!Array.isArray(account.items) || account.items.length === 0) {
+    const loans = Array.isArray(account.items) ? account.items : [];
+    const reservations = Array.isArray(account.reservations)
+      ? account.reservations
+      : [];
+
+    if (loans.length === 0 && reservations.length === 0) {
       const empty = document.createElement("div");
       empty.className = "mmm-library-monitor__empty dimmed light small";
       empty.textContent = this.translate("NO_ITEMS");
@@ -213,13 +227,31 @@ Module.register("MMM-LibraryMonitor", {
       return section;
     }
 
-    section.appendChild(this.createItemsTable(account.items));
+    if (loans.length > 0) {
+      section.appendChild(this.createItemsTable(loans, "loan"));
+    }
 
-    if (account.items.length > this.config.maxItems) {
+    if (reservations.length > 0) {
+      section.appendChild(
+        this.createSubsectionLabel(this.translate("RESERVATIONS_SECTION")),
+      );
+      section.appendChild(this.createItemsTable(reservations, "reservation"));
+    }
+
+    if (loans.length > this.config.maxItems) {
       const more = document.createElement("div");
       more.className = "mmm-library-monitor__more dimmed small";
       more.textContent = this.translate("MORE_ITEMS", {
-        count: account.items.length - this.config.maxItems,
+        count: loans.length - this.config.maxItems,
+      });
+      section.appendChild(more);
+    }
+
+    if (reservations.length > this.config.maxItems) {
+      const more = document.createElement("div");
+      more.className = "mmm-library-monitor__more dimmed small";
+      more.textContent = this.translate("MORE_ITEMS", {
+        count: reservations.length - this.config.maxItems,
       });
       section.appendChild(more);
     }
@@ -227,7 +259,14 @@ Module.register("MMM-LibraryMonitor", {
     return section;
   },
 
-  createItemsTable(items) {
+  createSubsectionLabel(text) {
+    const label = document.createElement("div");
+    label.className = "mmm-library-monitor__subsection-label dimmed small";
+    label.textContent = text;
+    return label;
+  },
+
+  createItemsTable(items, itemType) {
     const table = document.createElement("table");
     table.className = "small mmm-library-monitor__table";
 
@@ -237,7 +276,7 @@ Module.register("MMM-LibraryMonitor", {
       const row = document.createElement("tr");
       row.className = "mmm-library-monitor__row";
 
-      if (item.isOverdue) {
+      if (itemType === "loan" && item.isOverdue) {
         row.classList.add("mmm-library-monitor__row--overdue");
       } else if (item.daysRemaining <= this.config.urgencyThresholdDays) {
         row.classList.add("mmm-library-monitor__row--soon");
@@ -249,7 +288,7 @@ Module.register("MMM-LibraryMonitor", {
 
       const dueCell = document.createElement("td");
       dueCell.className = "mmm-library-monitor__due bright";
-      dueCell.textContent = this.formatDueDate(item);
+      dueCell.textContent = this.formatItemDate(item);
 
       row.appendChild(titleCell);
       row.appendChild(dueCell);
@@ -260,6 +299,45 @@ Module.register("MMM-LibraryMonitor", {
     return table;
   },
 
+  createCoverElement(item) {
+    const cover = document.createElement("img");
+    let showingPlaceholder = false;
+
+    const applyPlaceholder = () => {
+      if (showingPlaceholder) {
+        return;
+      }
+
+      showingPlaceholder = true;
+      cover.classList.add("mmm-library-monitor__cover--placeholder");
+      cover.src = PLACEHOLDER_COVER_URL;
+      cover.alt = "";
+    };
+
+    cover.className = "mmm-library-monitor__cover";
+    cover.alt = item.title;
+    cover.loading = "lazy";
+
+    cover.addEventListener("error", applyPlaceholder);
+    cover.addEventListener("load", () => {
+      if (showingPlaceholder) {
+        return;
+      }
+
+      if (cover.naturalWidth <= 5 || cover.naturalHeight <= 5) {
+        applyPlaceholder();
+      }
+    });
+
+    if (item.coverImageUrl) {
+      cover.src = item.coverImageUrl;
+    } else {
+      applyPlaceholder();
+    }
+
+    return cover;
+  },
+
   createTitleBlock(item) {
     const block = document.createElement("div");
     block.className = "mmm-library-monitor__title-block";
@@ -267,13 +345,8 @@ Module.register("MMM-LibraryMonitor", {
     const content = document.createElement("div");
     content.className = "mmm-library-monitor__title-content";
 
-    if (this.config.showBookCovers && item.coverImageUrl) {
-      const cover = document.createElement("img");
-      cover.className = "mmm-library-monitor__cover";
-      cover.src = item.coverImageUrl;
-      cover.alt = item.title;
-      cover.loading = "lazy";
-      content.appendChild(cover);
+    if (this.config.showBookCovers) {
+      content.appendChild(this.createCoverElement(item));
     }
 
     const text = document.createElement("div");
@@ -283,6 +356,13 @@ Module.register("MMM-LibraryMonitor", {
     title.className = "mmm-library-monitor__title-text bright";
     title.textContent = item.title;
     text.appendChild(title);
+
+    if (item.status && item.status !== "loan") {
+      const badge = document.createElement("div");
+      badge.className = "mmm-library-monitor__status light";
+      badge.textContent = this.formatReservationStatus(item);
+      text.appendChild(badge);
+    }
 
     const metaParts = [];
     if (this.config.showAuthor && item.author) {
@@ -325,6 +405,14 @@ Module.register("MMM-LibraryMonitor", {
       this.translate("ITEM_COUNT", { count: this.accountData.totalItems || 0 }),
     );
 
+    if (this.accountData.totalReservations) {
+      parts.push(
+        this.translate("RESERVATION_COUNT", {
+          count: this.accountData.totalReservations,
+        }),
+      );
+    }
+
     const errorCount = accounts.filter((account) => account.error).length;
     if (errorCount > 0) {
       parts.push(this.translate("ACCOUNT_ERRORS", { count: errorCount }));
@@ -337,6 +425,14 @@ Module.register("MMM-LibraryMonitor", {
     const parts = [];
     const count = account.totalItems || 0;
     parts.push(this.translate("ITEM_COUNT", { count }));
+
+    if (account.totalReservations) {
+      parts.push(
+        this.translate("RESERVATION_COUNT", {
+          count: account.totalReservations,
+        }),
+      );
+    }
 
     if (this.config.showFees && account.pendingFees) {
       parts.push(this.translate("FEES", { fees: account.pendingFees }));
@@ -353,16 +449,56 @@ Module.register("MMM-LibraryMonitor", {
     return parts.join(" | ");
   },
 
+  formatReservationStatus(item) {
+    if (item.status === "readyForPickup") {
+      return this.translate("READY_FOR_PICKUP");
+    }
+
+    return this.translate("RESERVED");
+  },
+
+  formatItemDate(item) {
+    if (item.type === "reservation") {
+      return this.formatReservationDate(item);
+    }
+
+    return this.formatDueDate(item);
+  },
+
+  formatReservationDate(item) {
+    if (item.status === "readyForPickup") {
+      if (!item.pickupDeadline) {
+        return this.translate("READY_FOR_PICKUP");
+      }
+
+      return this.translate("READY_FOR_PICKUP_UNTIL", {
+        date: this.formatDate(item.pickupDeadline),
+      });
+    }
+
+    if (!item.reservationDate) {
+      return this.translate("RESERVED");
+    }
+
+    return this.translate("RESERVED_ON", {
+      date: this.formatDate(item.reservationDate),
+    });
+  },
+
+  formatDate(isoDate) {
+    return new Intl.DateTimeFormat(this.config.dateLocale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(isoDate));
+  },
+
   formatDueDate(item) {
     if (!item.dueDate) {
       return this.translate("UNKNOWN_DATE");
     }
 
-    const formattedDate = new Intl.DateTimeFormat(this.config.dateLocale, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).format(new Date(item.dueDate));
+    const formattedDate = this.formatDate(item.dueDate);
 
     if (item.isOverdue) {
       return this.translate("OVERDUE_ON", { date: formattedDate });
