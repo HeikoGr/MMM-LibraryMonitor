@@ -1,9 +1,6 @@
 const NodeHelper = require("node_helper");
 const { fetchAccountData } = require("./lib/opac-client");
-
-function isDebugEnabled(config) {
-  return Boolean(config?.debug);
-}
+const shared = require("./lib/mmm-shared");
 
 function getAccountName(account) {
   return account?.label || account?.id || "account";
@@ -23,45 +20,65 @@ function summarizeAccount(account) {
   ].join(", ");
 }
 
-function debugLog(config, message) {
-  if (!isDebugEnabled(config)) {
-    return;
-  }
-
-  console.log(`[MMM-LibraryMonitor][debug] ${message}`);
-}
-
 module.exports = NodeHelper.create({
   start() {
+    this.notifications = shared.buildNotifications("MMM-LibraryMonitor");
+    this.transport = shared.createNodeTransport({
+      moduleName: "MMM-LibraryMonitor",
+      sendSocketNotification: this.sendSocketNotification.bind(this),
+    });
+    this.errorFactory = shared.createErrorFactory();
+    this.logger = shared.createLogger({
+      moduleName: "MMM-LibraryMonitor",
+      identifier: "node_helper",
+      getLevel: () => "info",
+      structured: true,
+      redact: true,
+    });
+    this.instanceRegistry = shared.createInstanceRegistry({ mode: "auto" });
     this.pendingRequests = new Map();
   },
 
   socketNotificationReceived(notification, payload) {
-    if (notification !== "MMM-LibraryMonitor_FETCH") {
+    if (notification !== this.notifications.REQUEST) {
       return;
     }
 
-    const moduleId = payload?.id || "default";
+    if (payload?.action !== "FETCH_ACCOUNTS") {
+      return;
+    }
+
+    const moduleId = this.instanceRegistry.resolveKey(payload?.identifier, payload);
+    const moduleConfig = payload?.data?.config || {};
     if (this.pendingRequests.has(moduleId)) {
-      debugLog(payload?.config, `skip overlapping update for module=${moduleId}`);
+      this.logger.debug("skip overlapping update", {
+        moduleId,
+        action: payload?.action,
+      });
       return;
     }
 
-    debugLog(
-      payload?.config,
-      `update requested for module=${moduleId} interval=${payload?.config?.updateInterval || "n/a"}ms`,
-    );
+    this.logger.info("update requested", {
+      moduleId,
+      intervalMs: moduleConfig.updateInterval || null,
+      requestId: payload?.requestId,
+    });
 
     this.pendingRequests.set(moduleId, true);
-    this.updateAccount(moduleId, payload?.config)
+    this.updateAccount(moduleId, moduleConfig, payload)
       .catch((error) => {
-        debugLog(
-          payload?.config,
-          `update failed for module=${moduleId}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        this.sendSocketNotification(
-          `MMM-LibraryMonitor_ERROR#${moduleId}`,
-          error instanceof Error ? error.message : String(error),
+        this.logger.error("update failed", {
+          moduleId,
+          message: error instanceof Error ? error.message : String(error),
+          requestId: payload?.requestId,
+        });
+        this.transport.sendError(
+          payload,
+          this.errorFactory.fromException(error, {
+            code: "FETCH_FAILED",
+            retryable: true,
+            details: { moduleId },
+          }),
         );
       })
       .finally(() => {
@@ -69,7 +86,7 @@ module.exports = NodeHelper.create({
       });
   },
 
-  async updateAccount(moduleId, config) {
+  async updateAccount(moduleId, config, requestEnvelope) {
     const startedAt = Date.now();
     const data = await fetchAccountData(config || {});
     const durationMs = Date.now() - startedAt;
@@ -77,11 +94,15 @@ module.exports = NodeHelper.create({
       ? data.accounts.map((account) => summarizeAccount(account)).join(" | ")
       : "no accounts";
 
-    debugLog(
-      config,
-      `update finished for module=${moduleId} in ${durationMs}ms totalLoans=${Number(data?.totalItems) || 0} totalReservations=${Number(data?.totalReservations) || 0} accounts=[${summaries}]`,
-    );
+    this.logger.info("update finished", {
+      moduleId,
+      durationMs,
+      totalLoans: Number(data?.totalItems) || 0,
+      totalReservations: Number(data?.totalReservations) || 0,
+      accounts: summaries,
+    });
 
-    this.sendSocketNotification(`MMM-LibraryMonitor_DATA#${moduleId}`, data);
+    this.instanceRegistry.set(moduleId, { updatedAt: Date.now() });
+    this.transport.sendSuccess(requestEnvelope, data);
   },
 });

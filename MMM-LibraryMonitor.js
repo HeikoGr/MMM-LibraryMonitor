@@ -27,11 +27,35 @@ Module.register("MMM-LibraryMonitor", {
   },
 
   start() {
+    this.shared = globalThis.MMModuleShared;
+    this.sharedContext = this.shared.createModuleContext(
+      "MMM-LibraryMonitor",
+      this.identifier,
+      {
+        instanceId: this.identifier,
+        logLevel: this.config.debug ? "debug" : "info",
+        logStructured: true,
+        logRedaction: true,
+      },
+    );
+    this.transport = this.shared.createTransport({
+      moduleName: "MMM-LibraryMonitor",
+      identifier: this.identifier,
+      instanceId: this.sharedContext.instanceId,
+      sendSocketNotification: this.sendSocketNotification.bind(this),
+    });
+    this.notifications = this.transport.notifications;
+
     this.loaded = false;
     this.error = null;
     this.accountData = null;
+    this.lastSuccessfulData = null;
     this.updateTimer = null;
     this.scheduleUpdate(0);
+  },
+
+  getScripts() {
+    return [this.file("lib/mmm-shared.js")];
   },
 
   getStyles() {
@@ -74,30 +98,47 @@ Module.register("MMM-LibraryMonitor", {
   },
 
   requestUpdate() {
-    this.sendSocketNotification("MMM-LibraryMonitor_FETCH", {
-      id: this.identifier,
+    this.transport.sendRequest("FETCH_ACCOUNTS", {
       config: this.config,
     });
   },
 
   socketNotificationReceived(notification, payload) {
-    if (notification === `MMM-LibraryMonitor_DATA#${this.identifier}`) {
+    if (
+      notification === this.notifications.RESPONSE &&
+      payload?.identifier === this.identifier &&
+      payload?.action === "FETCH_ACCOUNTS"
+    ) {
       this.loaded = true;
       this.error = null;
-      this.accountData = payload;
+      this.accountData = payload.data;
+      this.lastSuccessfulData = payload.data;
       this.updateDom(this.config.animationSpeed);
       return;
     }
 
-    if (notification === `MMM-LibraryMonitor_ERROR#${this.identifier}`) {
+    if (
+      notification === this.notifications.ERROR &&
+      payload?.identifier === this.identifier &&
+      payload?.action === "FETCH_ACCOUNTS"
+    ) {
       this.loaded = true;
-      this.error = this.resolveErrorMessage(payload);
+      this.error = this.resolveErrorMessage(payload?.error || payload);
+      if (this.lastSuccessfulData) {
+        this.accountData = this.lastSuccessfulData;
+      }
       this.updateDom(this.config.animationSpeed);
     }
   },
 
   resolveErrorMessage(payload) {
-    return typeof payload === "string" ? payload : String(payload || "");
+    if (typeof payload === "string") {
+      return payload;
+    }
+    if (payload?.message) {
+      return String(payload.message);
+    }
+    return String(payload || "");
   },
 
   getDom() {
