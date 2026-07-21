@@ -27,6 +27,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "postinstall": "node scripts/install-mmm-shared-submodule.js",
     "test": "node --test tests/*.test.js",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

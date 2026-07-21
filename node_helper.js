@@ -1,6 +1,6 @@
 const NodeHelper = require("node_helper");
 const { fetchAccountData } = require("./lib/opac-client");
-const shared = require("./lib/mmm-shared");
+const shared = require("./lib/mmm-shared/mmm-shared");
 
 function getAccountName(account) {
   return account?.label || account?.id || "account";
