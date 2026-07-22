@@ -8,10 +8,18 @@ MagicMirror module to display borrowed library items, due dates, reservations, a
 cd ~/MagicMirror/modules
 git clone https://github.com/HeikoGr/MMM-LibraryMonitor
 cd MMM-LibraryMonitor
-npm install
+npm ci --omit=dev
 ```
 
-## Minimal Example
+## Update
+
+```bash
+cd ~/MagicMirror/modules/MMM-LibraryMonitor
+git pull
+npm ci --omit=dev
+```
+
+## Configuration
 
 ```js
 {
@@ -31,7 +39,7 @@ npm install
     username: "12345678",
     password: "geheim",
   },
-}
+},
 ```
 
 ## Documentation

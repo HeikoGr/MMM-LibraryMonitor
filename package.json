@@ -8,7 +8,7 @@
     "url": "https://github.com/HeikoGr/MMM-LibraryMonitor/issues"
   },
   "homepage": "https://github.com/HeikoGr/MMM-LibraryMonitor#readme",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "MagicMirror module to display borrowed media and due dates from library OPAC accounts.",
   "main": "MMM-LibraryMonitor.js",
   "type": "commonjs",
@@ -31,17 +31,18 @@
     "test": "node --test tests/*.test.js",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "check": "node scripts/magicmirror-check.mjs --devcontainer-only --current",
+    "check": "node --run mmcheck",
+    "mmcheck": "node scripts/magicmirror-check.mjs --devcontainer-only --current",
     "debug:live": "node scripts/live-account-fetch.js",
-    "deps:update": "ncu -u && npm install && npx biome migrate --write"
+    "deps:update": "npx --yes npm-check-updates -u && npm install && npx @biomejs/biome migrate --write"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
     "fetch-cookie": "^3.2.0",
     "tough-cookie": "^6.0.2",
-    "undici": "^8.7.0"
+    "undici": "^8.8.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.3"
+    "@biomejs/biome": "^2.5.5"
   }
 }
