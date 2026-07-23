@@ -2,6 +2,10 @@
 
 MMM-LibraryMonitor shows borrowed items, due dates, reservations, and account summaries from a supported OPAC account.
 
+## Screenshot
+
+![MMM-LibraryMonitor](../preview.png)
+
 Use this wiki if you want to:
 
 - install the module cleanly

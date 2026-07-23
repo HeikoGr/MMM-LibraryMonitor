@@ -2,6 +2,10 @@
 
 MagicMirror module to display borrowed library items, due dates, reservations, and account summaries from supported OPAC systems.
 
+## Screenshot
+
+![MMM-LibraryMonitor](preview.png)
+
 ## Installation
 
 ```bash
