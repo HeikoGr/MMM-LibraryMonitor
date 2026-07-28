@@ -43,6 +43,6 @@
     "undici": "^8.9.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.5"
+    "@biomejs/biome": "^2.5.6"
   }
 }
