@@ -48,7 +48,10 @@ module.exports = NodeHelper.create({
       return;
     }
 
-    const moduleId = this.instanceRegistry.resolveKey(payload?.identifier, payload);
+    const moduleId = this.instanceRegistry.resolveKey(
+      payload?.identifier,
+      payload,
+    );
     const moduleConfig = payload?.data?.config || {};
     if (this.pendingRequests.has(moduleId)) {
       this.logger.debug("skip overlapping update", {

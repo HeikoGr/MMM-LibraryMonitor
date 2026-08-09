@@ -174,12 +174,12 @@ Module.register("MMM-LibraryMonitor", {
 
     const visibleAccounts = this.config.hideEmptyAccounts
       ? accounts.filter(
-        (account) =>
-          account.error ||
-          (Array.isArray(account.items) && account.items.length > 0) ||
-          (Array.isArray(account.reservations) &&
-            account.reservations.length > 0),
-      )
+          (account) =>
+            account.error ||
+            (Array.isArray(account.items) && account.items.length > 0) ||
+            (Array.isArray(account.reservations) &&
+              account.reservations.length > 0),
+        )
       : accounts;
 
     const summary = document.createElement("div");
@@ -196,7 +196,8 @@ Module.register("MMM-LibraryMonitor", {
     const hasAnyItems = accounts.some(
       (account) =>
         (Array.isArray(account.items) && account.items.length > 0) ||
-        (Array.isArray(account.reservations) && account.reservations.length > 0),
+        (Array.isArray(account.reservations) &&
+          account.reservations.length > 0),
     );
 
     if (!hasAnyItems) {

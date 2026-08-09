@@ -32,8 +32,8 @@
 | `showValidUntil` | Show card validity. |
 | `showNotices` | Show account notices from the OPAC page. |
 | `hideEmptyAccounts` | Hide accounts without loans and without errors. |
-| `dateLocale` | Locale used for due-date formatting. |
 | `debug` | Enable lightweight backend debug logs. |
+| `dateLocale` | Locale used for due-date formatting. |
 
 ## Behavior Notes
 

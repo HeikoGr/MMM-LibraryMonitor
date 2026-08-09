@@ -12,7 +12,10 @@ function runGit(args) {
   });
 }
 
-if (!fs.existsSync(path.join(repoRoot, ".git")) || !fs.existsSync(path.join(repoRoot, ".gitmodules"))) {
+if (
+  !fs.existsSync(path.join(repoRoot, ".git")) ||
+  !fs.existsSync(path.join(repoRoot, ".gitmodules"))
+) {
   process.exit(0);
 }
 
@@ -22,7 +25,14 @@ if (syncResult.error || syncResult.status !== 0) {
   process.exit(0);
 }
 
-const updateResult = runGit(["submodule", "update", "--init", "--recursive", "--checkout", submodulePath]);
+const updateResult = runGit([
+  "submodule",
+  "update",
+  "--init",
+  "--recursive",
+  "--checkout",
+  submodulePath,
+]);
 if (updateResult.error || updateResult.status !== 0) {
   console.warn("Skipping mmm-shared submodule update.");
 }

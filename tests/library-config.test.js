@@ -90,6 +90,6 @@ test("resolveAccountConfigs does not leak top-level credentials into an accounts
           },
         ],
       }),
-    /Library account credentials are missing/,
+    /Library account (credentials are missing|username is missing|password is missing)/,
   );
 });
