@@ -1,0 +1,27 @@
+# Project vocabulary for cspell: OPAC/MagicMirror jargon, German terms, and fixture data used
+# throughout code, docs, and tests.
+Abholbereit
+abholbereit
+ACMR
+cardnumber
+customssl
+devsources
+ekzreservations
+LIBRARYMONITOR
+librarymonitor
+magicmirror
+mannheim
+mmcheck
+Neckarau
+nodatareturned
+noloanesreturned
+noreservationsreturned
+oclc
+oneline
+opac
+OPAC
+passwordchangesuccesspopup
+tpnl
+ucekz
+VIEWSTATE
+watchlist

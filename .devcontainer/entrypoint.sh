@@ -45,6 +45,7 @@ copy_from_template() {
 }
 
 ln -s "$MAGICMIRROR_PATH" "/opt/magicmirror" 2>/dev/null || true
+git config --global alias.pr '!f() { git fetch -fu ${2:-origin} refs/pull/$1/head:pr/$1 && git switch pr/$1; }; f'
 
 copy_from_template "${MODULE_DIR}/config/config.js" "${MODULE_DIR}/config/config.template.js" "config.js"
 copy_from_template "${MODULE_DIR}/config/custom.css" "${MODULE_DIR}/config/custom.template.css" "custom.css"
@@ -62,6 +63,22 @@ if [ -f "$ENV_FILE" ]; then
   set -a
   . "$ENV_FILE"
   set +a
+fi
+
+# Configure git if environment variables are set
+if command -v git >/dev/null 2>&1; then
+  GIT_NAME="${GIT_USER_NAME:-$GIT_USER}"
+  GIT_EMAIL="${GIT_USER_EMAIL:-$GIT_EMAIL}"
+
+  if [ -n "$GIT_NAME" ]; then
+    echo "Setting git user.name to '$GIT_NAME'"
+    git config --global user.name "$GIT_NAME" || true
+  fi
+
+  if [ -n "$GIT_EMAIL" ]; then
+    echo "Setting git user.email to '$GIT_EMAIL'"
+    git config --global user.email "$GIT_EMAIL" || true
+  fi
 fi
 
 echo "${GREEN}=== MagicMirror Startup (module devcontainer) ===${NC}"
