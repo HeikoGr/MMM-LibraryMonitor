@@ -8,6 +8,18 @@ All notable changes to this project will be documented in this file.
 - Switched the backend HTTP client from node-fetch to the built-in fetch API.
 - Added documentation and community support files.
 
+## [0.2.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.1.7...v0.2.0) (2026-08-16)
+
+
+### 🔌 Features
+
+* **parser:** handle leading checkbox in header rows for account parsing ([70db6ec](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/70db6ec23e937bd05745c5ab5dc0ac511fbf7691))
+
+
+### 🐛 Fixes
+
+* **opac-client:** correct regex pattern ([75c57ad](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/75c57ad13a7c735e4e40b45b90ed256b79211528))
+
 ## [0.1.7](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.1.6...v0.1.7) (2026-08-15)
 
 
