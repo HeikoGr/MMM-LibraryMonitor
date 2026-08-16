@@ -18,7 +18,11 @@
   "forwardPorts": [8080],
   "customizations": {
     "vscode": {
-      "extensions": ["actboy168.tasks", "vstirbu.vscode-mermaid-preview"],
+      "extensions": [
+        "actboy168.tasks",
+        "vstirbu.vscode-mermaid-preview",
+        "Anthropic.claude-code"
+      ],
       "settings": {
         "chat.mcp.autoStart": true,
         "editor.formatOnSave": true,
