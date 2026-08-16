@@ -4,113 +4,180 @@
     {
       "label": "pm2: restart all",
       "type": "shell",
-      "command": "/bin/sh",
-      "args": ["./scripts/require-devcontainer.sh", "pm2", "restart", "all"],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
+      "command": "./scripts/require-devcontainer.sh",
+      "args": ["pm2", "restart", "all"],
       "presentation": {
         "echo": true,
         "reveal": "always",
         "panel": "dedicated",
-        "clear": true
+        "close": true
+      },
+      "options": {
+        "statusbar": {
+          "label": "$(sync) Restart",
+          "color": "#FF9800",
+          "detail": "Restart all PM2 processes"
+        }
       },
       "problemMatcher": []
     },
     {
-      "label": "pm2: logs (follow)",
+      "label": "lint + biome",
       "type": "shell",
-      "command": "/bin/sh",
-      "args": [
-        "./scripts/require-devcontainer.sh",
-        "pm2",
-        "logs",
-        "--lines",
-        "200"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
+      "command": "node --run lint:fix",
       "presentation": {
         "echo": true,
         "reveal": "always",
         "panel": "dedicated",
         "focus": true,
-        "clear": true
+        "close": false
       },
-      "problemMatcher": []
-    },
-    {
-      "label": "pm2: restart & logs (clean)",
-      "dependsOrder": "sequence",
-      "dependsOn": ["pm2: restart & clean", "pm2: logs (follow)"],
-      "problemMatcher": []
-    },
-    {
-      "label": "pm2: restart & clean",
-      "type": "shell",
-      "command": "/bin/sh",
-      "args": [
-        "./scripts/require-devcontainer.sh",
-        "bash",
-        "-lc",
-        "pm2 restart all && pm2 flush"
-      ],
+      "isBackground": false,
       "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": true,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "mmm-librarymonitor: live account fetch",
-      "type": "shell",
-      "command": "node",
-      "args": ["scripts/live-account-fetch.js"],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": true
+        "statusbar": {
+          "label": "$(check-all) Lint + Biome",
+          "color": "#00BCD4",
+          "detail": "Run Biome checks and fixes"
+        }
       },
       "problemMatcher": []
     },
     {
       "label": "npm: test",
       "type": "shell",
-      "command": "npm",
-      "args": ["test"],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
+      "command": "node --run test",
       "presentation": {
         "echo": true,
         "reveal": "always",
-        "panel": "shared"
+        "panel": "dedicated",
+        "focus": true,
+        "close": false
+      },
+      "isBackground": false,
+      "options": {
+        "statusbar": {
+          "label": "$(beaker) Test",
+          "color": "#EC407A",
+          "detail": "Run the node:test unit test suite"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "pm2: logs (follow)",
+      "type": "shell",
+      "command": "./scripts/require-devcontainer.sh",
+      "args": ["pm2", "logs", "--lines", "200"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "isBackground": false,
+      "options": {
+        "statusbar": {
+          "label": "$(eye) Logs",
+          "color": "#4CAF50",
+          "detail": "Follow PM2 logs"
+        }
       },
       "problemMatcher": []
     },
     {
       "label": "npm: install",
       "type": "shell",
-      "command": "npm",
-      "args": ["install"],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
+      "command": "npm install",
       "presentation": {
         "echo": true,
         "reveal": "always",
-        "panel": "shared"
+        "panel": "shared",
+        "close": false
+      },
+      "isBackground": false,
+      "options": {
+        "statusbar": {
+          "label": "$(eye) npm i",
+          "color": "#ffe600",
+          "detail": "npm install"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "bash: open terminal",
+      "type": "shell",
+      "command": "bash",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "isBackground": false,
+      "options": {
+        "statusbar": {
+          "label": "$(terminal-bash) Bash",
+          "color": "#607D8B",
+          "detail": "Open an interactive Bash terminal"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "pm2: restart & clean",
+      "type": "shell",
+      "command": "./scripts/require-devcontainer.sh",
+      "args": ["bash", "-lc", "clear && pm2 restart all && pm2 flush"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true,
+        "close": true
+      },
+      "isBackground": false,
+      "options": {
+        "statusbar": {
+          "hide": true,
+          "label": "$(refresh) Restart & Clean",
+          "color": "#9C27B0",
+          "detail": "Restart all PM2 processes and flush logs"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "pm2: restart & logs (clean)",
+      "dependsOrder": "sequence",
+      "options": {
+        "statusbar": {
+          "label": "$(refresh) Restart & Logs (clean)",
+          "color": "#9C27B0",
+          "detail": "Restart all PM2 processes and flush logs"
+        }
+      },
+      "dependsOn": ["pm2: restart & clean", "pm2: logs (follow)"],
+      "problemMatcher": []
+    },
+    {
+      "label": "mmm-librarymonitor: live account fetch",
+      "type": "shell",
+      "command": "node scripts/live-account-fetch.js",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      },
+      "isBackground": false,
+      "options": {
+        "statusbar": {
+          "hide": true,
+          "label": "$(cloud-download) Live fetch",
+          "color": "#795548",
+          "detail": "Fetch a live library account (debug tool, also: node --run debug:live)"
+        }
       },
       "problemMatcher": []
     }

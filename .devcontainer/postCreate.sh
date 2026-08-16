@@ -22,10 +22,6 @@ mkdir -p /tmp/playwright-mcp
 
 if command -v playwright-mcp >/dev/null 2>&1; then
   playwright-mcp --version >/dev/null 2>&1 || true
-else
-  npm install -g @playwright/mcp playwright || {
-    echo "WARNING: Playwright MCP installation failed"
-  }
 fi
 
 echo "postCreate setup complete!"
