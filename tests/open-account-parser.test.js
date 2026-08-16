@@ -154,6 +154,53 @@ test("parseAccountHtml extracts loans, fees, validity, and warning", () => {
   assert.equal(result.reservations[1].reservationDate, "2026-07-11");
 });
 
+test("parseAccountHtml handles a leading checkbox <td> before the <th> columns", () => {
+  const html = `
+    <html>
+      <body>
+        <table id="ctl00_tpnlLoans_ucLoansView_grdViewLoans">
+          <tr>
+            <td><input type="checkbox"></td>
+            <th abbr="Cover">Cover</th>
+            <th abbr="Titel"><a href="#">Titel</a></th>
+            <th abbr="Verfasser"><a href="#">Sort$Author</a></th>
+            <th abbr="Mediengruppe"><a href="#">Sort$MediaGroup</a></th>
+            <th abbr="Aktuelle Frist"><a href="#">Sort$DueDate</a></th>
+            <th abbr="Verlängerbar">Verlängerbar</th>
+          </tr>
+          <tr>
+            <td><input name="copy1"></td>
+            <td>
+              <img
+                src="/Mannheim/DesktopModules/OCLC.OPEN.PL.DNN.BaseLibrary/StyleSheets/Images/Fallbacks/emptyURL.gif?12.0.1.2"
+                data-sources="SetSimpleCover|a|https://images-eu.ssl-images-amazon.com/images/P/3522186087.03.MZZZZZZZ.jpg|a|http://www.amazon.de/exec/obidos/ASIN/3522186087"
+              >
+            </td>
+            <td><a href="/de-de/Mediensuche?id=1066114002">Angriff der Dämonen</a></td>
+            <td>Mirow, Benedict</td>
+            <td>Belletristik KiJu</td>
+            <td>14.09.2026</td>
+            <td>Verlängerbar</td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+
+  const result = parseAccountHtml(html);
+
+  assert.equal(result.totalItems, 1);
+  assert.equal(result.items[0].id, "1066114002");
+  assert.equal(result.items[0].title, "Angriff der Dämonen");
+  assert.equal(result.items[0].author, "Mirow, Benedict");
+  assert.equal(result.items[0].format, "Belletristik KiJu");
+  assert.equal(result.items[0].dueDate, "2026-09-14");
+  assert.equal(
+    result.items[0].coverImageUrl,
+    "https://images-eu.ssl-images-amazon.com/images/P/3522186087.03.MZZZZZZZ.jpg",
+  );
+});
+
 test("parseAccountHtml ignores popup warnings that are not account notices", () => {
   const html = `
     <html>
