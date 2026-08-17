@@ -8,6 +8,13 @@ All notable changes to this project will be documented in this file.
 - Switched the backend HTTP client from node-fetch to the built-in fetch API.
 - Added documentation and community support files.
 
+## [0.3.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.2.0...v0.3.0) (2026-08-17)
+
+
+### 🔌 Features
+
+* **lifecycle:** implement lifecycle management for module updates ([0f265af](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/0f265af856a302168bf5601858b95f585f6631f5))
+
 ## [0.2.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.1.7...v0.2.0) (2026-08-16)
 
 
