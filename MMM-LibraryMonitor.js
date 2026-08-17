@@ -9,7 +9,16 @@ Module.register("MMM-LibraryMonitor", {
     libraryConfig: null,
     libraryConfigFile: null,
     accounts: [],
-    updateInterval: 15 * 60 * 1000,
+    // Loan periods change at most once a day and every fetch is a login + scrape
+    // against a public OPAC, so four anchored fetches a day are plenty.
+    updateInterval: 6 * 60 * 60 * 1000,
+    // Hour of day the update grid is anchored to (null disables anchoring).
+    updateAnchorHour: 7,
+    // Keep refreshing while the module is hidden (e.g. under MMM-Carousel) so
+    // the displayed data is warm whenever the module becomes visible.
+    backgroundRefresh: true,
+    // Optional window without any polling, e.g. { from: "23:00", to: "06:00" }.
+    quietHours: null,
     animationSpeed: 1000,
     requestTimeout: 30 * 1000,
     maxItems: 10,
@@ -45,13 +54,30 @@ Module.register("MMM-LibraryMonitor", {
       sendSocketNotification: this.sendSocketNotification.bind(this),
     });
     this.notifications = this.transport.notifications;
+    this.logger = this.shared.createLogger({
+      moduleName: "MMM-LibraryMonitor",
+      identifier: this.identifier,
+      getLevel: () => (this.config.debug ? "debug" : "info"),
+      structured: false,
+      redact: true,
+    });
 
     this.loaded = false;
     this.error = null;
     this.accountData = null;
     this.lastSuccessfulData = null;
-    this.updateTimer = null;
-    this.scheduleUpdate(0);
+
+    this.lifecycle = this.shared.createLifecycle({
+      module: this,
+      logger: this.logger,
+      updateInterval: this.config.updateInterval,
+      minUpdateInterval: 60 * 1000,
+      anchorHour: this.config.updateAnchorHour,
+      backgroundRefresh: this.config.backgroundRefresh !== false,
+      quietHours: this.config.quietHours,
+      onFetch: () => this.requestUpdate(),
+    });
+    this.lifecycle.start();
   },
 
   getScripts() {
@@ -69,32 +95,12 @@ Module.register("MMM-LibraryMonitor", {
     };
   },
 
-  scheduleUpdate(delay) {
-    if (this.updateTimer) {
-      clearTimeout(this.updateTimer);
-    }
-
-    this.updateTimer = setTimeout(() => {
-      this.requestUpdate();
-      this.scheduleUpdate(this.config.updateInterval);
-    }, delay);
-  },
-
   suspend() {
-    if (this.updateTimer) {
-      clearTimeout(this.updateTimer);
-      this.updateTimer = null;
-    }
+    this.lifecycle.suspend();
   },
 
   resume() {
-    this.scheduleUpdate(0);
-  },
-
-  notificationReceived(notification) {
-    if (notification === "DOM_OBJECTS_CREATED" && !this.loaded) {
-      this.requestUpdate();
-    }
+    this.lifecycle.resume();
   },
 
   requestUpdate() {
@@ -113,7 +119,8 @@ Module.register("MMM-LibraryMonitor", {
       this.error = null;
       this.accountData = payload.data;
       this.lastSuccessfulData = payload.data;
-      this.updateDom(this.config.animationSpeed);
+      this.lifecycle.markDataReceived();
+      this.lifecycle.render(this.config.animationSpeed);
       return;
     }
 
@@ -123,11 +130,12 @@ Module.register("MMM-LibraryMonitor", {
       payload?.action === "FETCH_ACCOUNTS"
     ) {
       this.loaded = true;
+      this.lifecycle.markFetchFailed();
       this.error = this.resolveErrorMessage(payload?.error || payload);
       if (this.lastSuccessfulData) {
         this.accountData = this.lastSuccessfulData;
       }
-      this.updateDom(this.config.animationSpeed);
+      this.lifecycle.render(this.config.animationSpeed);
     }
   },
 

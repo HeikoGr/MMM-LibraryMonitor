@@ -16,7 +16,10 @@
 
 | Option | Description |
 | --- | --- |
-| `updateInterval` | Refresh interval in milliseconds. |
+| `updateInterval` | Refresh interval in milliseconds. Default: 6 h — loan periods change at most once a day and every fetch is a login plus scrape against the OPAC. |
+| `updateAnchorHour` | Hour of day the refresh grid is anchored to (default `7` → 07:00, 13:00, 19:00, 01:00). `null` disables anchoring. |
+| `backgroundRefresh` | Keep refreshing while the module is hidden (e.g. under MMM-Carousel). Default `true`, so showing the module never causes a request. |
+| `quietHours` | Optional window without any polling, e.g. `{ from: "23:00", to: "06:00" }`. |
 | `requestTimeout` | Backend request timeout in milliseconds. |
 | `maxItems` | Maximum number of loans shown per account. |
 | `urgencyThresholdDays` | Highlight items due soon. |

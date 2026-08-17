@@ -12,10 +12,19 @@
   "remoteUser": "root",
   "containerEnv": {
     "IN_DEVCONTAINER": "1",
-    "PLAYWRIGHT_CHROMIUM_ARGS": "--no-sandbox --disable-dev-shm-usage --disable-gpu",
-    "ENABLE_PLAYWRIGHT_MCP": "1"
+    "PLAYWRIGHT_CHROMIUM_ARGS": "--no-sandbox --disable-dev-shm-usage --disable-gpu"
   },
   "forwardPorts": [8080],
+  // The host's Claude Code login and SSH keys are mounted read-only so the container
+  // can inherit them. Runtime bind mounts: nothing lands in the image, and all that is
+  // committed here are two paths. Read-only on purpose - the container runs as root,
+  // so a writable mount would leave root-owned files in the host's home directory.
+  // .devcontainer/postStart.sh copies both into the container's own HOME.
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.claude,target=/tmp/host-claude,type=bind,readonly",
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh,target=/tmp/host-ssh,type=bind,readonly"
+  ],
+
   "customizations": {
     "vscode": {
       // All shared extensions come from the base image (devcontainer.metadata label in
@@ -29,5 +38,5 @@
     }
   },
   "postCreateCommand": "/bin/sh .devcontainer/postCreate.sh",
-  "postStartCommand": "mkdir -p /tmp/playwright-mcp-output && if [ \"${ENABLE_PLAYWRIGHT_MCP:-1}\" = \"1\" ]; then nohup playwright-mcp --headless --isolated --no-sandbox --port=8931 --output-dir=/tmp/playwright-mcp-output > /tmp/playwright-mcp.log 2>&1 & echo \"Playwright MCP started (logs: /tmp/playwright-mcp.log, port: 8931)\"; else echo 'Playwright MCP disabled via ENABLE_PLAYWRIGHT_MCP'; fi; echo 'Devcontainer started. MagicMirror at http://localhost:8080'; echo 'Playwright MCP is configured in .vscode/mcp.json'"
+  "postStartCommand": "/bin/sh .devcontainer/postStart.sh"
 }
