@@ -19,5 +19,10 @@
   "RESERVED_ON": "reserved on {date}",
   "READY_FOR_PICKUP": "ready for pickup",
   "READY_FOR_PICKUP_UNTIL": "ready until {date}",
-  "MORE_ITEMS": "+{count} more"
+  "MORE_ITEMS": "+{count} more",
+  "STALE_DATA": "Showing last known data – refresh failed: {error}",
+  "TABLE_CAPTION_LOANS": "Borrowed items with due dates",
+  "TABLE_CAPTION_RESERVATIONS": "Reserved items",
+  "STATUS_OVERDUE": "overdue",
+  "STATUS_DUE_SOON": "due soon"
 }

@@ -19,5 +19,10 @@
   "RESERVED_ON": "vorgemerkt am {date}",
   "READY_FOR_PICKUP": "abholbereit",
   "READY_FOR_PICKUP_UNTIL": "abholbereit bis {date}",
-  "MORE_ITEMS": "+{count} weitere"
+  "MORE_ITEMS": "+{count} weitere",
+  "STALE_DATA": "Letzter Stand – Aktualisierung fehlgeschlagen: {error}",
+  "TABLE_CAPTION_LOANS": "Ausgeliehene Medien mit Leihfrist",
+  "TABLE_CAPTION_RESERVATIONS": "Vorgemerkte Medien",
+  "STATUS_OVERDUE": "überfällig",
+  "STATUS_DUE_SOON": "Frist läuft bald ab"
 }

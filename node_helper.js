@@ -1,6 +1,24 @@
 const NodeHelper = require("node_helper");
 const { fetchAccountData } = require("./lib/opac-client");
+const { createCoverProxy } = require("./lib/cover-proxy");
+const { createResultCache } = require("./lib/result-cache");
 const shared = require("./lib/mmm-shared/mmm-shared");
+
+/**
+ * The shared default list stops at `password`, but a library card number is a
+ * personal identifier in its own right and must not reach the log either.
+ */
+const REDACTED_LOG_KEYS = [
+  "password",
+  "token",
+  "apikey",
+  "secret",
+  "qrcode",
+  "refreshtoken",
+  "username",
+  "cardnumber",
+  "credentials",
+];
 
 function getAccountName(account) {
   return account?.label || account?.id || "account";
@@ -34,9 +52,48 @@ module.exports = NodeHelper.create({
       getLevel: () => "info",
       structured: true,
       redact: true,
+      redactedKeys: REDACTED_LOG_KEYS,
     });
     this.instanceRegistry = shared.createInstanceRegistry({ mode: "auto" });
     this.pendingRequests = new Map();
+    this.resultCache = createResultCache();
+    this.coverProxy = createCoverProxy({
+      expressApp: this.expressApp,
+      moduleName: this.name,
+      logger: this.logger,
+    });
+  },
+
+  /**
+   * Replace supplier cover URLs with local proxy paths, so the browser never
+   * talks to the cover supplier directly. The cached payload is left untouched.
+   */
+  applyCoverProxy(data, config) {
+    if (config?.proxyBookCovers === false || !Array.isArray(data?.accounts)) {
+      return data;
+    }
+
+    const mapItem = (item) => {
+      if (!item?.coverImageUrl) {
+        return item;
+      }
+
+      const proxied = this.coverProxy.register(item.coverImageUrl);
+      return proxied ? { ...item, coverImageUrl: proxied } : item;
+    };
+
+    return {
+      ...data,
+      accounts: data.accounts.map((account) => ({
+        ...account,
+        items: Array.isArray(account.items)
+          ? account.items.map(mapItem)
+          : account.items,
+        reservations: Array.isArray(account.reservations)
+          ? account.reservations.map(mapItem)
+          : account.reservations,
+      })),
+    };
   },
 
   socketNotificationReceived(notification, payload) {
@@ -91,7 +148,17 @@ module.exports = NodeHelper.create({
 
   async updateAccount(moduleId, config, requestEnvelope) {
     const startedAt = Date.now();
-    const data = await fetchAccountData(config || {});
+    this.resultCache.setTtl(config?.resultCacheTtl);
+    const cacheKey = this.resultCache.buildCacheKey(config);
+
+    let data = this.resultCache.get(cacheKey);
+    const fromCache = data !== null;
+
+    if (!fromCache) {
+      data = await fetchAccountData(config || {}, { logger: this.logger });
+      this.resultCache.set(cacheKey, data);
+    }
+
     const durationMs = Date.now() - startedAt;
     const summaries = Array.isArray(data?.accounts)
       ? data.accounts.map((account) => summarizeAccount(account)).join(" | ")
@@ -100,12 +167,16 @@ module.exports = NodeHelper.create({
     this.logger.info("update finished", {
       moduleId,
       durationMs,
+      fromCache,
       totalLoans: Number(data?.totalItems) || 0,
       totalReservations: Number(data?.totalReservations) || 0,
       accounts: summaries,
     });
 
     this.instanceRegistry.set(moduleId, { updatedAt: Date.now() });
-    this.transport.sendSuccess(requestEnvelope, data);
+    this.transport.sendSuccess(
+      requestEnvelope,
+      this.applyCoverProxy(data, config),
+    );
   },
 });

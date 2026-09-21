@@ -6,7 +6,7 @@ const {
   hasAccountOverview,
   parseAccountHtml,
   parseGermanDate,
-} = require("../lib/open-account-parser");
+} = require("../lib/adapters/open/parser");
 
 test("parseGermanDate converts dd.MM.yyyy to ISO format", () => {
   assert.equal(parseGermanDate("24.06.2026"), "2026-06-24");

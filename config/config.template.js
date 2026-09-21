@@ -57,6 +57,15 @@ const config = {
         debug: false,
         dateLocale: "de-DE",
         urgencyThresholdDays: 3,
+        // Load book covers through the mirror instead of letting the browser
+        // fetch them from the library's cover supplier.
+        proxyBookCovers: true,
+        // Keep parallel OPAC logins low so a family of cards does not look like
+        // a burst of login attempts to the library server.
+        maxConcurrentAccounts: 2,
+        accountStaggerMs: 750,
+        // Serve a recent result instead of logging in again (0 disables).
+        resultCacheTtl: 5 * 60 * 1000,
       },
     },
   ],

@@ -4,6 +4,22 @@ const PLACEHOLDER_COVER_URL = `data:image/svg+xml;charset=UTF-8,${encodeURICompo
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 46"><rect width="32" height="46" rx="3" fill="#202632"/><rect x="5" y="6" width="22" height="34" rx="2" fill="#425064"/><rect x="8" y="6" width="2" height="34" rx="1" fill="#d8b36a"/><path d="M12 15h10M12 20h10M12 25h7" stroke="#dce4f0" stroke-width="1.5" stroke-linecap="round"/></svg>',
 )}`;
 
+/**
+ * The shared default list stops at `password`, but a library card number is a
+ * personal identifier in its own right and must not reach the log either.
+ */
+const REDACTED_LOG_KEYS = [
+  "password",
+  "token",
+  "apikey",
+  "secret",
+  "qrcode",
+  "refreshtoken",
+  "username",
+  "cardnumber",
+  "credentials",
+];
+
 Module.register("MMM-LibraryMonitor", {
   defaults: {
     libraryConfig: null,
@@ -33,6 +49,17 @@ Module.register("MMM-LibraryMonitor", {
     debug: false,
     dateLocale: "de-DE",
     urgencyThresholdDays: 3,
+    // Serve book covers through the mirror instead of letting the browser talk
+    // to the library's cover supplier, which would otherwise learn one title
+    // per loan from the household's IP address.
+    proxyBookCovers: true,
+    // Keep simultaneous OPAC logins low: a family with several cards should not
+    // look like a burst of parallel login attempts to the library server.
+    maxConcurrentAccounts: 2,
+    accountStaggerMs: 750,
+    // Reuse a recent result instead of logging in again, e.g. after a browser
+    // reload or when a second mirror client connects.
+    resultCacheTtl: 5 * 60 * 1000,
   },
 
   start() {
@@ -60,6 +87,7 @@ Module.register("MMM-LibraryMonitor", {
       getLevel: () => (this.config.debug ? "debug" : "info"),
       structured: false,
       redact: true,
+      redactedKeys: REDACTED_LOG_KEYS,
     });
 
     this.loaded = false;
@@ -101,6 +129,10 @@ Module.register("MMM-LibraryMonitor", {
 
   resume() {
     this.lifecycle.resume();
+  },
+
+  stop() {
+    this.lifecycle.stop();
   },
 
   requestUpdate() {
@@ -152,8 +184,12 @@ Module.register("MMM-LibraryMonitor", {
   getDom() {
     const wrapper = document.createElement("div");
     wrapper.className = "mmm-library-monitor";
+    // Announce refreshed loan data without pulling focus away.
+    wrapper.setAttribute("aria-live", "polite");
 
-    if (this.error) {
+    // Only fall back to a bare error screen when there is nothing worth showing.
+    // A failed refresh on top of good data keeps the data and flags it as stale.
+    if (this.error && !this.accountData) {
       wrapper.classList.add("mmm-library-monitor--error");
       wrapper.textContent = this.error;
       return wrapper;
@@ -189,6 +225,10 @@ Module.register("MMM-LibraryMonitor", {
               account.reservations.length > 0),
         )
       : accounts;
+
+    if (this.error) {
+      wrapper.appendChild(this.createStaleNotice());
+    }
 
     const summary = document.createElement("div");
     summary.className = "mmm-library-monitor__summary small light";
@@ -309,6 +349,41 @@ Module.register("MMM-LibraryMonitor", {
     return section;
   },
 
+  createStaleNotice() {
+    const notice = document.createElement("div");
+    notice.className = "mmm-library-monitor__stale small";
+    notice.setAttribute("role", "status");
+    notice.textContent = this.translate("STALE_DATA", { error: this.error });
+    return notice;
+  },
+
+  /**
+   * Urgency means "a deadline is running out". A loan has one, and so does a
+   * reservation that is ready for pickup. A pending reservation does not: its
+   * date is the day it was *placed*, which always lies in the past and would
+   * otherwise mark every reservation as urgent.
+   * @param {object} item - Loan or reservation
+   * @param {string} itemType - "loan" or "reservation"
+   * @returns {string|null} "overdue", "soon", or null
+   */
+  resolveUrgency(item, itemType) {
+    const hasDeadline =
+      itemType === "loan" ||
+      (itemType === "reservation" && item.status === "readyForPickup");
+
+    if (!hasDeadline || !Number.isFinite(item.daysRemaining)) {
+      return null;
+    }
+
+    if (item.isOverdue) {
+      return "overdue";
+    }
+
+    return item.daysRemaining <= this.config.urgencyThresholdDays
+      ? "soon"
+      : null;
+  },
+
   createSubsectionLabel(text) {
     const label = document.createElement("div");
     label.className = "mmm-library-monitor__subsection-label dimmed small";
@@ -320,25 +395,46 @@ Module.register("MMM-LibraryMonitor", {
     const table = document.createElement("table");
     table.className = "small mmm-library-monitor__table";
 
+    const caption = document.createElement("caption");
+    caption.className = "mmm-library-monitor__sr-only";
+    caption.textContent = this.translate(
+      itemType === "reservation"
+        ? "TABLE_CAPTION_RESERVATIONS"
+        : "TABLE_CAPTION_LOANS",
+    );
+    table.appendChild(caption);
+
     const tbody = document.createElement("tbody");
 
     items.slice(0, this.config.maxItems).forEach((item) => {
       const row = document.createElement("tr");
       row.className = "mmm-library-monitor__row";
 
-      if (itemType === "loan" && item.isOverdue) {
-        row.classList.add("mmm-library-monitor__row--overdue");
-      } else if (item.daysRemaining <= this.config.urgencyThresholdDays) {
-        row.classList.add("mmm-library-monitor__row--soon");
+      const urgency = this.resolveUrgency(item, itemType);
+      if (urgency) {
+        row.classList.add(`mmm-library-monitor__row--${urgency}`);
       }
 
-      const titleCell = document.createElement("td");
+      // A <th scope="row"> gives the row an accessible name, so a screen reader
+      // announces the due date together with the title it belongs to.
+      const titleCell = document.createElement("th");
+      titleCell.setAttribute("scope", "row");
       titleCell.className = "mmm-library-monitor__title";
       titleCell.appendChild(this.createTitleBlock(item));
 
       const dueCell = document.createElement("td");
       dueCell.className = "mmm-library-monitor__due bright";
       dueCell.textContent = this.formatItemDate(item);
+
+      if (urgency) {
+        // Colour alone must not carry the status.
+        const status = document.createElement("span");
+        status.className = "mmm-library-monitor__sr-only";
+        status.textContent = ` (${this.translate(
+          urgency === "overdue" ? "STATUS_OVERDUE" : "STATUS_DUE_SOON",
+        )})`;
+        dueCell.appendChild(status);
+      }
 
       row.appendChild(titleCell);
       row.appendChild(dueCell);
@@ -365,7 +461,10 @@ Module.register("MMM-LibraryMonitor", {
     };
 
     cover.className = "mmm-library-monitor__cover";
-    cover.alt = item.title;
+    // The title is rendered directly beside the cover, so the image adds
+    // nothing for a screen reader.
+    cover.alt = "";
+    cover.setAttribute("aria-hidden", "true");
     cover.loading = "lazy";
 
     cover.addEventListener("error", applyPlaceholder);
@@ -379,13 +478,32 @@ Module.register("MMM-LibraryMonitor", {
       }
     });
 
-    if (item.coverImageUrl) {
+    if (this.isSafeCoverUrl(item.coverImageUrl)) {
       cover.src = item.coverImageUrl;
     } else {
       applyPlaceholder();
     }
 
     return cover;
+  },
+
+  /**
+   * Covers are either proxied through the mirror (a root-relative path) or
+   * loaded over http(s). Anything else - javascript:, data:, protocol-relative
+   * URLs - is refused rather than handed to the browser.
+   * @param {string} url - Cover URL as delivered by the backend
+   * @returns {boolean} True when the URL is safe to assign to img.src
+   */
+  isSafeCoverUrl(url) {
+    if (typeof url !== "string" || url === "") {
+      return false;
+    }
+
+    if (url.startsWith("/")) {
+      return !url.startsWith("//");
+    }
+
+    return /^https?:\/\//i.test(url);
   },
 
   createTitleBlock(item) {
@@ -536,11 +654,25 @@ Module.register("MMM-LibraryMonitor", {
   },
 
   formatDate(isoDate) {
-    return new Intl.DateTimeFormat(this.config.dateLocale, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).format(new Date(isoDate));
+    if (!isoDate) {
+      return this.translate("UNKNOWN_DATE");
+    }
+
+    const parsed = new Date(isoDate);
+    if (Number.isNaN(parsed.getTime())) {
+      return this.translate("UNKNOWN_DATE");
+    }
+
+    try {
+      return new Intl.DateTimeFormat(this.config.dateLocale, {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(parsed);
+    } catch {
+      // A bad dateLocale must not take the whole mirror render down.
+      return parsed.toISOString().slice(0, 10);
+    }
   },
 
   formatDueDate(item) {
