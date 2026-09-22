@@ -51,6 +51,7 @@ function account(overrides = {}) {
   return {
     id: "a1",
     label: "child 1",
+    status: "ok",
     error: null,
     items: [],
     totalItems: 0,
@@ -113,6 +114,102 @@ test("a failed refresh keeps the last good data and marks it stale", () => {
     false,
     "stale data is a notice, not a full error screen",
   );
+});
+
+function unavailable(overrides = {}) {
+  return account({
+    status: "unavailable",
+    error: "OPAC request failed (503 Service Unavailable).",
+    ...overrides,
+  });
+}
+
+function respond(module, data) {
+  module.socketNotificationReceived(module.notifications.RESPONSE, {
+    identifier: module.identifier,
+    action: "FETCH_ACCOUNTS",
+    data,
+  });
+}
+
+test("an OPAC outage on every account keeps the last good data", () => {
+  const good = payload([account({ items: [loan()], totalItems: 1 })]);
+
+  const { module, dom } = render((module) => {
+    respond(module, good);
+    // The backend reports account errors inside a success envelope, so this is
+    // the path a real outage takes - not the ERROR notification.
+    respond(module, payload([unavailable()]));
+  });
+
+  assert.ok(
+    dom.textContent.includes("Geheimnis auf dem Ponyhof"),
+    "yesterday's loans must survive an unreachable OPAC",
+  );
+  assert.ok(find(dom, "mmm-library-monitor__stale"), "a stale notice is shown");
+  assert.equal(find(dom, "mmm-library-monitor__account-error"), null);
+  assert.equal(
+    module.lifecycle.fetchFailures,
+    1,
+    "a response without any usable account counts as a failed fetch",
+  );
+  assert.equal(
+    module.lastSuccessfulData.accounts[0].items[0].title,
+    loan().title,
+  );
+});
+
+test("a single failed account keeps its own previous state", () => {
+  const good = payload([
+    account({ id: "a1", label: "child 1", items: [loan()], totalItems: 1 }),
+    account({
+      id: "a2",
+      label: "child 2",
+      items: [loan({ id: "l2", title: "Zweites Buch" })],
+      totalItems: 1,
+    }),
+  ]);
+
+  const { module, dom } = render((module) => {
+    respond(module, good);
+    respond(
+      module,
+      payload([
+        account({
+          id: "a1",
+          label: "child 1",
+          items: [loan({ title: "Neues Buch" })],
+          totalItems: 1,
+        }),
+        unavailable({ id: "a2", label: "child 2" }),
+      ]),
+    );
+  });
+
+  assert.ok(dom.textContent.includes("Neues Buch"), "a1 is refreshed");
+  assert.ok(dom.textContent.includes("Zweites Buch"), "a2 keeps its loans");
+  assert.equal(findAll(dom, "mmm-library-monitor__stale").length, 1);
+  assert.equal(find(dom, "mmm-library-monitor__account-error"), null);
+  assert.equal(module.accountData.totalItems, 2);
+  assert.equal(module.lifecycle.dataReceived, 2);
+  assert.equal(module.lifecycle.fetchFailures, 0);
+
+  // A later full success clears the stale marker again.
+  withDocument(() => {
+    respond(module, good);
+    const fresh = module.getDom();
+    assert.equal(find(fresh, "mmm-library-monitor__stale"), null);
+  });
+});
+
+test("an unavailable account with nothing to keep shows its error", () => {
+  const { module, dom } = render((module) => {
+    respond(module, payload([unavailable()]));
+  });
+
+  assert.ok(find(dom, "mmm-library-monitor__account-error"));
+  assert.equal(find(dom, "mmm-library-monitor__stale"), null);
+  assert.equal(module.lifecycle.fetchFailures, 1);
 });
 
 test("a failure with nothing cached still shows the error", () => {

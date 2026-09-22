@@ -131,10 +131,6 @@ Module.register("MMM-LibraryMonitor", {
     this.lifecycle.resume();
   },
 
-  stop() {
-    this.lifecycle.stop();
-  },
-
   requestUpdate() {
     this.transport.sendRequest("FETCH_ACCOUNTS", {
       config: this.config,
@@ -147,12 +143,7 @@ Module.register("MMM-LibraryMonitor", {
       payload?.identifier === this.identifier &&
       payload?.action === "FETCH_ACCOUNTS"
     ) {
-      this.loaded = true;
-      this.error = null;
-      this.accountData = payload.data;
-      this.lastSuccessfulData = payload.data;
-      this.lifecycle.markDataReceived();
-      this.lifecycle.render(this.config.animationSpeed);
+      this.handleAccountsResponse(payload.data);
       return;
     }
 
@@ -169,6 +160,88 @@ Module.register("MMM-LibraryMonitor", {
       }
       this.lifecycle.render(this.config.animationSpeed);
     }
+  },
+
+  /**
+   * The backend always answers with a success envelope, even when an OPAC was
+   * unreachable; the outcome lives in each account's `status`. An unavailable
+   * account keeps what was shown before, so a short OPAC outage does not wipe
+   * yesterday's loans off the mirror.
+   * @param {object} data - Payload as delivered by the node_helper
+   */
+  handleAccountsResponse(data) {
+    this.loaded = true;
+
+    const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+    const unavailable = accounts.filter((account) =>
+      this.isAccountUnavailable(account),
+    );
+
+    if (accounts.length > 0 && unavailable.length === accounts.length) {
+      // Nothing usable came back: treat it like a failed fetch, including the
+      // lifecycle backoff, so a dead OPAC is not polled at full rate.
+      this.lifecycle.markFetchFailed();
+      if (this.lastSuccessfulData) {
+        this.error = this.resolveErrorMessage(unavailable[0].error);
+        this.accountData = this.lastSuccessfulData;
+      } else {
+        // Nothing to keep; show the per-account errors as they are.
+        this.error = null;
+        this.accountData = data;
+      }
+      this.lifecycle.render(this.config.animationSpeed);
+      return;
+    }
+
+    const merged = this.mergeWithPrevious(data, this.lastSuccessfulData);
+    this.error = null;
+    this.accountData = merged;
+    this.lastSuccessfulData = merged;
+    this.lifecycle.markDataReceived();
+    this.lifecycle.render(this.config.animationSpeed);
+  },
+
+  isAccountUnavailable(account) {
+    return account?.status === "unavailable";
+  },
+
+  /**
+   * Replace every account that refreshed successfully and keep the previous
+   * state of every account that did not, flagged with the refresh error.
+   * @param {object} data - Fresh payload
+   * @param {object|null} previous - Last displayed payload
+   * @returns {object} Payload to display
+   */
+  mergeWithPrevious(data, previous) {
+    const previousById = new Map(
+      (Array.isArray(previous?.accounts) ? previous.accounts : [])
+        .filter((account) => !this.isAccountUnavailable(account))
+        .map((account) => [account.id, account]),
+    );
+
+    const fresh = Array.isArray(data?.accounts) ? data.accounts : [];
+    const accounts = fresh.map((account) => {
+      if (!this.isAccountUnavailable(account)) {
+        return account;
+      }
+
+      const kept = previousById.get(account.id);
+      return kept ? { ...kept, staleError: account.error } : account;
+    });
+
+    const sum = (key) =>
+      accounts.reduce(
+        (total, account) => total + (Number(account[key]) || 0),
+        0,
+      );
+
+    return {
+      ...data,
+      accounts,
+      totalAccounts: accounts.length,
+      totalItems: sum("totalItems"),
+      totalReservations: sum("totalReservations"),
+    };
   },
 
   resolveErrorMessage(payload) {
@@ -220,6 +293,7 @@ Module.register("MMM-LibraryMonitor", {
       ? accounts.filter(
           (account) =>
             account.error ||
+            account.staleError ||
             (Array.isArray(account.items) && account.items.length > 0) ||
             (Array.isArray(account.reservations) &&
               account.reservations.length > 0),
@@ -227,7 +301,7 @@ Module.register("MMM-LibraryMonitor", {
       : accounts;
 
     if (this.error) {
-      wrapper.appendChild(this.createStaleNotice());
+      wrapper.appendChild(this.createStaleNotice(this.error));
     }
 
     const summary = document.createElement("div");
@@ -241,14 +315,18 @@ Module.register("MMM-LibraryMonitor", {
     const accountSections = visibleAccounts.map((account, index) =>
       this.createAccountSection(account, index),
     );
-    const hasAnyItems = accounts.some(
+    // An account error must stay visible even when nothing is on loan anywhere,
+    // otherwise a failed login reads as "no items".
+    const hasAnythingToShow = accounts.some(
       (account) =>
+        account.error ||
+        account.staleError ||
         (Array.isArray(account.items) && account.items.length > 0) ||
         (Array.isArray(account.reservations) &&
           account.reservations.length > 0),
     );
 
-    if (!hasAnyItems) {
+    if (!hasAnythingToShow) {
       const empty = document.createElement("div");
       empty.className = "mmm-library-monitor__empty dimmed light small";
       empty.textContent = this.translate("NO_ITEMS");
@@ -295,6 +373,12 @@ Module.register("MMM-LibraryMonitor", {
 
     if (account.error) {
       return section;
+    }
+
+    if (account.staleError) {
+      section.appendChild(
+        this.createStaleNotice(this.resolveErrorMessage(account.staleError)),
+      );
     }
 
     if (this.config.showNotices && account.warning) {
@@ -349,11 +433,11 @@ Module.register("MMM-LibraryMonitor", {
     return section;
   },
 
-  createStaleNotice() {
+  createStaleNotice(error) {
     const notice = document.createElement("div");
     notice.className = "mmm-library-monitor__stale small";
     notice.setAttribute("role", "status");
-    notice.textContent = this.translate("STALE_DATA", { error: this.error });
+    notice.textContent = this.translate("STALE_DATA", { error });
     return notice;
   },
 
@@ -581,7 +665,9 @@ Module.register("MMM-LibraryMonitor", {
       );
     }
 
-    const errorCount = accounts.filter((account) => account.error).length;
+    const errorCount = accounts.filter(
+      (account) => account.error || account.staleError,
+    ).length;
     if (errorCount > 0) {
       parts.push(this.translate("ACCOUNT_ERRORS", { count: errorCount }));
     }

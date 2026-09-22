@@ -25,7 +25,8 @@ const config = {
           api: "open",
           data: {
             baseurl: "https://bibliotheken.komm.one/mannheim/de-de",
-            customssl: false, // for libraries with self-signed certificates
+            // For a self-signed OPAC certificate, pin it instead of disabling checks:
+            // ca: "config/opac-ca.pem",
             urls: {
               account: "Mein-Konto", // path to the account page, relative to baseurl
             },

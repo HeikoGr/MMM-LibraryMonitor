@@ -5,7 +5,16 @@
 ### Login fails
 
 - Re-check the account path configured under `libraryConfig.data.urls.account`.
-- Verify the OPAC host URL and whether the account needs special SSL handling.
+- Verify the OPAC host URL.
+- Look for `OPAC TLS certificate problem` in the log. If the library really uses
+  a self-signed certificate, pin it with `libraryConfig.data.ca` (see
+  [Configuration → TLS](Configuration#tls)) rather than setting `customssl`.
+
+### "Last known data" notice stays visible
+
+The OPAC could not be reached or refused the login on the last refresh; the
+module keeps showing what it had. The notice names the reason. It disappears on
+the next successful refresh.
 
 ### No items are shown
 

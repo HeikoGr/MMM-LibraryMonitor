@@ -207,3 +207,20 @@ test("certificate problems are described only when something is wrong", () => {
     /no TLS certificate/,
   );
 });
+
+test("frontend and node_helper redact the same log keys", () => {
+  // The list exists twice because the frontend runs in the browser and cannot
+  // require() a shared file. This test keeps the two copies from drifting.
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const extract = (file) => {
+    const source = fs.readFileSync(path.join(__dirname, "..", file), "utf8");
+    const match = source.match(/const REDACTED_LOG_KEYS = \[([\s\S]*?)\];/);
+    assert.ok(match, `${file} defines REDACTED_LOG_KEYS`);
+    return [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
+  };
+
+  const frontend = extract("MMM-LibraryMonitor.js");
+  assert.ok(frontend.includes("cardnumber"));
+  assert.deepEqual(extract("node_helper.js"), frontend);
+});

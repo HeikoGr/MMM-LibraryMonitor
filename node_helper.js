@@ -1,5 +1,5 @@
 const NodeHelper = require("node_helper");
-const { fetchAccountData } = require("./lib/opac-client");
+const { ACCOUNT_STATUS_OK, fetchAccountData } = require("./lib/opac-client");
 const { createCoverProxy } = require("./lib/cover-proxy");
 const { createResultCache } = require("./lib/result-cache");
 const shared = require("./lib/mmm-shared/mmm-shared");
@@ -36,6 +36,13 @@ function summarizeAccount(account) {
     `validUntil=${account?.validUntil || "-"}`,
     `warning=${account?.warning || "-"}`,
   ].join(", ");
+}
+
+function isCompleteResult(data) {
+  return (
+    Array.isArray(data?.accounts) &&
+    data.accounts.every((account) => account?.status === ACCOUNT_STATUS_OK)
+  );
 }
 
 module.exports = NodeHelper.create({
@@ -156,7 +163,11 @@ module.exports = NodeHelper.create({
 
     if (!fromCache) {
       data = await fetchAccountData(config || {}, { logger: this.logger });
-      this.resultCache.set(cacheKey, data);
+      // A result with a failed account must not be replayed: a reload right
+      // after an OPAC outage should retry instead of showing the error again.
+      if (isCompleteResult(data)) {
+        this.resultCache.set(cacheKey, data);
+      }
     }
 
     const durationMs = Date.now() - startedAt;

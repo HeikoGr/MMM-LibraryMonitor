@@ -12,6 +12,23 @@
 | `account.password` | Nested alternative to `password`. |
 | `accounts` | Array of account objects for multi-account setups. |
 
+## TLS
+
+The login sends your card number and password to the OPAC, so the certificate
+is fully verified by default. Most libraries need nothing here —
+`bibliotheken.komm.one`, for example, has a regular publicly trusted
+certificate.
+
+| Option | Description |
+| --- | --- |
+| `libraryConfig.data.ca` | Trust this certificate for the OPAC, for a library with a self-signed or private-CA certificate. A PEM string, or a path to a PEM file (relative paths resolve against the module directory). Verification, including the host name check, stays on. Takes precedence over `customssl`. |
+| `libraryConfig.data.customssl` | **Insecure, not recommended.** `true` switches certificate verification off entirely; anyone on the network path can read your credentials. Only a literal `true` has this effect. Kept for compatibility — prefer `ca`. The backend logs a warning while it is set, and a second one if the certificate turns out to be trusted anyway. |
+
+Book covers are always fetched with full verification; neither option applies to
+the cover proxy. A cover that fails verification falls back to the placeholder.
+An OPAC configured over plain `http://` works, but the backend logs a warning on
+every refresh because credentials then travel unencrypted.
+
 ## Refresh And Limits
 
 | Option | Description |
@@ -48,14 +65,19 @@
 - When `accounts` is used, each account gets its own summary and loan list.
 - The default UI is read-only.
 - Renewal workflows are intentionally not part of this module version.
-- A failed refresh does not clear the display: the last successful result stays
-  visible with a "last known data" notice above it. Only a failure with nothing
-  cached yet shows a bare error message.
+- A failed refresh does not clear the display. This covers both a failed request
+  and an OPAC that answers but cannot be logged into: each account keeps its last
+  successful state with a "last known data" notice, while accounts that did
+  refresh are updated. Only an account with nothing shown yet displays its error.
+  When no account could be refreshed, the next attempt backs off instead of
+  following the regular interval.
+- Results with a failed account are not put into the result cache, so a reload
+  after an OPAC outage retries instead of replaying the error.
 - Sessions are reused between refreshes. A refresh costs one request while the
   OPAC session is still valid, and falls back to a full login when it is not.
 - If an OPAC host presents a missing, expired or untrusted TLS certificate, the
   backend logs a warning naming the problem. This is diagnostic only; whether
-  such a certificate is accepted is still decided by `customssl`.
+  such a certificate is accepted is decided by the [TLS](#tls) options.
 
 ## Supported Library Systems
 

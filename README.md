@@ -34,7 +34,6 @@ npm ci --omit=dev
       api: "open",
       data: {
         baseurl: "https://bibliotheken.komm.one/mannheim/de-de",
-        customssl: true,
         urls: {
           account: "Mein-Konto",
         },
