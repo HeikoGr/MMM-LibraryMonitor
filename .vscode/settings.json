@@ -60,15 +60,5 @@
   "conventionalCommits.promptScopes": true,
   "conventionalCommits.promptBody": true,
   "conventionalCommits.promptFooter": true,
-  "conventionalCommits.scopes": [
-    "opac",
-    "parser",
-    "config",
-    "ui",
-    "i18n",
-    "deps",
-    "devcontainer",
-    "node_helper",
-    "cli"
-  ]
+  "conventionalCommits.scopes": ["opac", "parser", "config", "ui", "i18n", "deps", "devcontainer", "node_helper", "cli"]
 }

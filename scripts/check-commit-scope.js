@@ -17,14 +17,7 @@ const fs = require("node:fs");
 const { execFileSync } = require("node:child_process");
 
 // Types that promise "nothing user-visible changed".
-const LOW_SIGNAL_TYPES = new Set([
-  "chore",
-  "docs",
-  "style",
-  "ci",
-  "build",
-  "test",
-]);
+const LOW_SIGNAL_TYPES = new Set(["chore", "docs", "style", "ci", "build", "test"]);
 
 // Paths whose content ends up running on a user's mirror.
 const RUNTIME_PATHS = [
@@ -45,11 +38,7 @@ function isRuntimePath(file) {
 
 function getStagedFiles() {
   try {
-    return execFileSync(
-      "git",
-      ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-      { encoding: "utf8" },
-    )
+    return execFileSync("git", ["diff", "--cached", "--name-only", "--diff-filter=ACMR"], { encoding: "utf8" })
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
@@ -72,15 +61,7 @@ function countSubstantiveChanges(files) {
   try {
     const diff = execFileSync(
       "git",
-      [
-        "diff",
-        "--cached",
-        "--ignore-all-space",
-        "--ignore-blank-lines",
-        "--unified=0",
-        "--",
-        ...files,
-      ],
+      ["diff", "--cached", "--ignore-all-space", "--ignore-blank-lines", "--unified=0", "--", ...files],
       {
         encoding: "utf8",
         maxBuffer: 32 * 1024 * 1024,
@@ -94,11 +75,7 @@ function countSubstantiveChanges(files) {
         const content = line.slice(1).trim();
         if (!content) return false;
         // Comment-only churn is not behavior either.
-        return !(
-          content.startsWith("//") ||
-          content.startsWith("*") ||
-          content.startsWith("/*")
-        );
+        return !(content.startsWith("//") || content.startsWith("*") || content.startsWith("/*"));
       }).length;
   } catch {
     // If the diff cannot be read, do not block the commit.

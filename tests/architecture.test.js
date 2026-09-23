@@ -23,32 +23,17 @@ test("the adapter registry exposes the open adapter and rejects unknown systems"
   assert.deepEqual(listAdapters(), ["open"]);
 
   const adapter = resolveAdapter("open");
-  for (const method of [
-    "validateConfig",
-    "buildAccountUrl",
-    "resumeSession",
-    "login",
-  ]) {
-    assert.equal(
-      typeof adapter[method],
-      "function",
-      `adapter must provide ${method}()`,
-    );
+  for (const method of ["validateConfig", "buildAccountUrl", "resumeSession", "login"]) {
+    assert.equal(typeof adapter[method], "function", `adapter must provide ${method}()`);
   }
 
-  assert.throws(
-    () => resolveAdapter("koha"),
-    /Unsupported OPAC api "koha".*open/s,
-  );
+  assert.throws(() => resolveAdapter("koha"), /Unsupported OPAC api "koha".*open/s);
 });
 
 test("the open adapter builds the account URL from base and path", () => {
   const adapter = resolveAdapter("open");
 
-  assert.equal(
-    adapter.buildAccountUrl(openConfig()),
-    "https://bibliotheken.example/stadt/de-de/Mein-Konto",
-  );
+  assert.equal(adapter.buildAccountUrl(openConfig()), "https://bibliotheken.example/stadt/de-de/Mein-Konto");
   assert.equal(
     adapter.buildAccountUrl(openConfig({ baseurl: "https://x.example/a/" })),
     "https://x.example/a/Mein-Konto",
@@ -58,15 +43,8 @@ test("the open adapter builds the account URL from base and path", () => {
 test("library validation only accepts http(s) OPAC URLs", () => {
   assert.equal(validateSupportedLibrary(openConfig()).api, "open");
 
-  assert.throws(
-    () =>
-      validateSupportedLibrary(openConfig({ baseurl: "file:///etc/passwd" })),
-    /Only http\(s\)/,
-  );
-  assert.throws(
-    () => validateSupportedLibrary(openConfig({ baseurl: "not-a-url" })),
-    /invalid base URL/,
-  );
+  assert.throws(() => validateSupportedLibrary(openConfig({ baseurl: "file:///etc/passwd" })), /Only http\(s\)/);
+  assert.throws(() => validateSupportedLibrary(openConfig({ baseurl: "not-a-url" })), /invalid base URL/);
   assert.throws(
     () =>
       validateSupportedLibrary({
@@ -92,27 +70,15 @@ test("accounts are fetched with a bounded number of parallel logins", async () =
   });
 
   assert.equal(peak, 2, `at most two logins may run at once, saw ${peak}`);
-  assert.deepEqual(
-    results,
-    [2, 4, 6, 8, 10, 12],
-    "results keep their input order",
-  );
+  assert.deepEqual(results, [2, 4, 6, 8, 10, 12], "results keep their input order");
 });
 
 test("a single account is not delayed by the stagger", async () => {
   const startedAt = Date.now();
-  const results = await runWithConcurrency(
-    [1],
-    2,
-    5000,
-    async (value) => value,
-  );
+  const results = await runWithConcurrency([1], 2, 5000, async (value) => value);
 
   assert.deepEqual(results, [1]);
-  assert.ok(
-    Date.now() - startedAt < 1000,
-    "the first slot must start immediately",
-  );
+  assert.ok(Date.now() - startedAt < 1000, "the first slot must start immediately");
 });
 
 test("the result cache expires and is keyed by the credentials in use", () => {
@@ -131,15 +97,8 @@ test("the result cache expires and is keyed by the credentials in use", () => {
   const base = { accounts: [{ username: "u1", password: "p1" }] };
   const changed = { accounts: [{ username: "u1", password: "p2" }] };
   assert.equal(buildCacheKey(base), buildCacheKey({ ...base }));
-  assert.notEqual(
-    buildCacheKey(base),
-    buildCacheKey(changed),
-    "a changed password must invalidate the cache",
-  );
-  assert.ok(
-    !buildCacheKey(base).includes("p1"),
-    "the cache key must not carry the password itself",
-  );
+  assert.notEqual(buildCacheKey(base), buildCacheKey(changed), "a changed password must invalidate the cache");
+  assert.ok(!buildCacheKey(base).includes("p1"), "the cache key must not carry the password itself");
 });
 
 test("a zero TTL disables the result cache entirely", () => {
@@ -153,25 +112,11 @@ test("the cover proxy only accepts URLs scraped from an OPAC page", () => {
 
   const path = proxy.register("https://images.example/cover.jpg");
   assert.match(path, /^\/MMM-LibraryMonitor\/cover\/[a-f0-9]{32}$/);
-  assert.equal(
-    proxy.register("https://images.example/cover.jpg"),
-    path,
-    "the same cover keeps the same id",
-  );
+  assert.equal(proxy.register("https://images.example/cover.jpg"), path, "the same cover keeps the same id");
   assert.notEqual(path, proxy.register("https://images.example/other.jpg"));
 
-  for (const unsafe of [
-    "javascript:alert(1)",
-    "file:///etc/passwd",
-    "//evil.example/x.jpg",
-    "",
-    null,
-  ]) {
-    assert.equal(
-      proxy.register(unsafe),
-      "",
-      `must refuse ${JSON.stringify(unsafe)}`,
-    );
+  for (const unsafe of ["javascript:alert(1)", "file:///etc/passwd", "//evil.example/x.jpg", "", null]) {
+    assert.equal(proxy.register(unsafe), "", `must refuse ${JSON.stringify(unsafe)}`);
   }
 
   assert.equal(isProxyableUrl("http://images.example/c.png"), true);
@@ -179,15 +124,8 @@ test("the cover proxy only accepts URLs scraped from an OPAC page", () => {
 });
 
 test("certificate problems are described only when something is wrong", () => {
-  assert.equal(
-    describeCertificateProblem({ hasCertificate: true, authorized: true }),
-    null,
-  );
-  assert.equal(
-    describeCertificateProblem(null),
-    null,
-    "a non-TLS host is not a problem",
-  );
+  assert.equal(describeCertificateProblem({ hasCertificate: true, authorized: true }), null);
+  assert.equal(describeCertificateProblem(null), null, "a non-TLS host is not a problem");
 
   assert.match(
     describeCertificateProblem({

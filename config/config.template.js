@@ -55,7 +55,7 @@ const config = {
         showNotices: false,
         showBookCovers: true,
         hideEmptyAccounts: false,
-        debug: false,
+        // logLevel: "info", // optional; unset = MagicMirror's global logLevel
         dateLocale: "de-DE",
         urgencyThresholdDays: 3,
         // Load book covers through the mirror instead of letting the browser

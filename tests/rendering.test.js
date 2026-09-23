@@ -2,12 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const { createRenderer } = require("./helpers/module-loader");
-const {
-  find,
-  findAll,
-  findByTag,
-  withDocument,
-} = require("./helpers/dom-stub");
+const { find, findAll, findByTag, withDocument } = require("./helpers/dom-stub");
 
 function loan(overrides = {}) {
   return {
@@ -69,10 +64,7 @@ function payload(accounts) {
     accounts,
     totalAccounts: accounts.length,
     totalItems: accounts.reduce((sum, a) => sum + a.items.length, 0),
-    totalReservations: accounts.reduce(
-      (sum, a) => sum + a.reservations.length,
-      0,
-    ),
+    totalReservations: accounts.reduce((sum, a) => sum + a.reservations.length, 0),
   };
 }
 
@@ -84,6 +76,15 @@ function render(instanceSetup, configOverrides = {}) {
   });
 }
 
+/** Push account data the way the backend does (DATA event). */
+function respond(module, data) {
+  module.socketNotificationReceived(module.notifications.EVENT, {
+    identifier: module.identifier,
+    action: "DATA",
+    data,
+  });
+}
+
 function rowClasses(dom) {
   return findAll(dom, "mmm-library-monitor__row").map((row) => row.className);
 }
@@ -92,14 +93,10 @@ test("a failed refresh keeps the last good data and marks it stale", () => {
   const good = payload([account({ items: [loan()], totalItems: 1 })]);
 
   const { dom } = render((module) => {
-    module.socketNotificationReceived(module.notifications.RESPONSE, {
+    respond(module, good);
+    module.socketNotificationReceived(module.notifications.EVENT, {
       identifier: module.identifier,
-      action: "FETCH_ACCOUNTS",
-      data: good,
-    });
-    module.socketNotificationReceived(module.notifications.ERROR, {
-      identifier: module.identifier,
-      action: "FETCH_ACCOUNTS",
+      action: "FETCH_FAILED",
       error: { message: "OPAC request failed (503 Service Unavailable)." },
     });
   });
@@ -124,14 +121,6 @@ function unavailable(overrides = {}) {
   });
 }
 
-function respond(module, data) {
-  module.socketNotificationReceived(module.notifications.RESPONSE, {
-    identifier: module.identifier,
-    action: "FETCH_ACCOUNTS",
-    data,
-  });
-}
-
 test("an OPAC outage on every account keeps the last good data", () => {
   const good = payload([account({ items: [loan()], totalItems: 1 })]);
 
@@ -148,15 +137,7 @@ test("an OPAC outage on every account keeps the last good data", () => {
   );
   assert.ok(find(dom, "mmm-library-monitor__stale"), "a stale notice is shown");
   assert.equal(find(dom, "mmm-library-monitor__account-error"), null);
-  assert.equal(
-    module.lifecycle.fetchFailures,
-    1,
-    "a response without any usable account counts as a failed fetch",
-  );
-  assert.equal(
-    module.lastSuccessfulData.accounts[0].items[0].title,
-    loan().title,
-  );
+  assert.equal(module.lastSuccessfulData.accounts[0].items[0].title, loan().title);
 });
 
 test("a single failed account keeps its own previous state", () => {
@@ -192,7 +173,6 @@ test("a single failed account keeps its own previous state", () => {
   assert.equal(find(dom, "mmm-library-monitor__account-error"), null);
   assert.equal(module.accountData.totalItems, 2);
   assert.equal(module.lifecycle.dataReceived, 2);
-  assert.equal(module.lifecycle.fetchFailures, 0);
 
   // A later full success clears the stale marker again.
   withDocument(() => {
@@ -209,14 +189,14 @@ test("an unavailable account with nothing to keep shows its error", () => {
 
   assert.ok(find(dom, "mmm-library-monitor__account-error"));
   assert.equal(find(dom, "mmm-library-monitor__stale"), null);
-  assert.equal(module.lifecycle.fetchFailures, 1);
+  assert.equal(module.lifecycle.dataReceived, 0);
 });
 
 test("a failure with nothing cached still shows the error", () => {
   const { dom } = render((module) => {
-    module.socketNotificationReceived(module.notifications.ERROR, {
+    module.socketNotificationReceived(module.notifications.EVENT, {
       identifier: module.identifier,
-      action: "FETCH_ACCOUNTS",
+      action: "CONFIG_INVALID",
       error: { message: "Library account password is missing." },
     });
   });
@@ -227,9 +207,7 @@ test("a failure with nothing cached still shows the error", () => {
 
 test("a pending reservation is never treated as urgent", () => {
   const { dom } = render((module) => {
-    module.accountData = payload([
-      account({ reservations: [reservation()], totalReservations: 1 }),
-    ]);
+    module.accountData = payload([account({ reservations: [reservation()], totalReservations: 1 })]);
   });
 
   const classes = rowClasses(dom);
@@ -285,9 +263,7 @@ test("loans are marked by how much of the loan period is left", () => {
   });
 
   const classes = rowClasses(dom);
-  assert.ok(
-    !classes[0].includes("--soon") && !classes[0].includes("--overdue"),
-  );
+  assert.ok(!classes[0].includes("--soon") && !classes[0].includes("--overdue"));
   assert.ok(classes[1].includes("--soon"));
   assert.ok(classes[2].includes("--overdue"));
 });
@@ -305,9 +281,7 @@ test("only http(s) and mirror-local cover URLs reach img.src", () => {
   const { dom } = render((module) => {
     module.accountData = payload([
       account({
-        items: covers.map((coverImageUrl, index) =>
-          loan({ id: `c${index}`, coverImageUrl }),
-        ),
+        items: covers.map((coverImageUrl, index) => loan({ id: `c${index}`, coverImageUrl })),
         totalItems: covers.length,
       }),
     ]);
@@ -321,9 +295,7 @@ test("only http(s) and mirror-local cover URLs reach img.src", () => {
 
   for (const index of [2, 3, 4, 5]) {
     assert.ok(
-      images[index].classList.contains(
-        "mmm-library-monitor__cover--placeholder",
-      ),
+      images[index].classList.contains("mmm-library-monitor__cover--placeholder"),
       `cover "${covers[index]}" must fall back to the placeholder`,
     );
     assert.ok(
@@ -378,10 +350,7 @@ test("the loan table exposes row headers, a caption and a text status", () => {
   assert.equal(headerCells[0].getAttribute("scope"), "row");
 
   const due = find(dom, "mmm-library-monitor__due");
-  assert.ok(
-    due.textContent.includes("STATUS_OVERDUE"),
-    "urgency must be readable as text, not only as a colour",
-  );
+  assert.ok(due.textContent.includes("STATUS_OVERDUE"), "urgency must be readable as text, not only as a colour");
 });
 
 test("covers are marked decorative so the title is not announced twice", () => {
@@ -397,4 +366,25 @@ test("covers are marked decorative so the title is not announced twice", () => {
   const cover = find(dom, "mmm-library-monitor__cover");
   assert.equal(cover.alt, "");
   assert.equal(cover.getAttribute("aria-hidden"), "true");
+});
+
+test("the '+N more' lines come from the counts the backend sends", () => {
+  const { dom } = render((module) => {
+    respond(
+      module,
+      payload([
+        account({
+          items: [loan()],
+          totalItems: 13,
+          moreItems: 12,
+          reservations: [],
+          moreReservations: 0,
+        }),
+      ]),
+    );
+  });
+
+  const more = findAll(dom, "mmm-library-monitor__more");
+  assert.equal(more.length, 1, "no line for reservations without a rest");
+  assert.ok(more[0].textContent.includes("MORE_ITEMS"));
 });

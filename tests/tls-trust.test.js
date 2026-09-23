@@ -14,11 +14,7 @@ const {
   getDispatcher,
   resolveTlsTrust,
 } = require("../lib/tls-trust");
-const {
-  getSession,
-  clearSessions,
-  sessionCount,
-} = require("../lib/opac-client");
+const { getSession, clearSessions, sessionCount } = require("../lib/opac-client");
 
 function libraryConfig(data = {}) {
   return {
@@ -77,10 +73,7 @@ test("the default is full certificate verification", () => {
 });
 
 test("only a literal customssl: true switches verification off", () => {
-  assert.equal(
-    resolveTlsTrust(libraryConfig({ customssl: true })).mode,
-    TLS_MODE_INSECURE,
-  );
+  assert.equal(resolveTlsTrust(libraryConfig({ customssl: true })).mode, TLS_MODE_INSECURE);
   for (const value of [false, "true", "false", 1]) {
     assert.equal(
       resolveTlsTrust(libraryConfig({ customssl: value })).mode,
@@ -100,10 +93,7 @@ test("a pinned CA wins over customssl and rejects unusable input", () => {
     () => resolveTlsTrust(libraryConfig({ ca: "does/not/exist.pem" })),
     /Could not read CA certificate file/,
   );
-  assert.throws(
-    () => resolveTlsTrust(libraryConfig({ ca: "package.json" })),
-    /not PEM encoded/,
-  );
+  assert.throws(() => resolveTlsTrust(libraryConfig({ ca: "package.json" })), /not PEM encoded/);
 });
 
 test("a self-signed OPAC is refused by default and accepted when pinned", async (t) => {
@@ -114,10 +104,7 @@ test("a self-signed OPAC is refused by default and accepted when pinned", async 
   }
   t.after(() => fs.rmSync(certificate.dir, { recursive: true, force: true }));
 
-  const server = https.createServer(
-    { key: certificate.key, cert: certificate.cert },
-    (_req, res) => res.end("ok"),
-  );
+  const server = https.createServer({ key: certificate.key, cert: certificate.cert }, (_req, res) => res.end("ok"));
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(() => server.close());
   const url = `https://localhost:${server.address().port}/`;
@@ -127,10 +114,7 @@ test("a self-signed OPAC is refused by default and accepted when pinned", async 
       dispatcher: getDispatcher(resolveTlsTrust(libraryConfig(data))),
     });
 
-  await assert.rejects(
-    request({}),
-    "system trust must refuse a self-signed certificate",
-  );
+  await assert.rejects(request({}), "system trust must refuse a self-signed certificate");
 
   const pinned = await request({ ca: certificate.certFile });
   assert.equal(await pinned.text(), "ok");

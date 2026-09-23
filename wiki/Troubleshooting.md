@@ -14,7 +14,9 @@
 
 The OPAC could not be reached or refused the login on the last refresh; the
 module keeps showing what it had. The notice names the reason. It disappears on
-the next successful refresh.
+the next successful refresh. When no account could be refreshed, the backend retries
+within minutes; when only some accounts failed, it waits for the next regular refresh
+(up to `updateInterval` later).
 
 ### No items are shown
 
@@ -24,7 +26,9 @@ the next successful refresh.
 ### Parsing or display issues
 
 - Some OPAC systems change markup without notice.
-- Enable `debug: true` to log loaded account summaries and update cycles.
+- The backend logs every update cycle with a per-account summary at `info` level; check
+  `pm2 logs`. Debug output in the backend and the browser console appears when the global
+  `logLevel` in `config.js` contains `DEBUG` (and the module's own `logLevel` is unset or `debug`).
 
 ### Localized text looks unexpected
 

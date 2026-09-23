@@ -2,21 +2,15 @@ const config = require("../config/config.js");
 const { fetchAccountData } = require("../lib/opac-client");
 
 function resolveModuleConfig() {
-  const moduleEntry = config.modules.find(
-    (entry) => entry.module === "MMM-LibraryMonitor",
-  );
+  const moduleEntry = config.modules.find((entry) => entry.module === "MMM-LibraryMonitor");
   if (!moduleEntry?.config) {
-    throw new Error(
-      "MMM-LibraryMonitor module configuration not found in config/config.js.",
-    );
+    throw new Error("MMM-LibraryMonitor module configuration not found in config/config.js.");
   }
 
   return {
     ...moduleEntry.config,
-    username:
-      process.env.MMM_LIBRARY_MONITOR_USERNAME || moduleEntry.config.username,
-    password:
-      process.env.MMM_LIBRARY_MONITOR_PASSWORD || moduleEntry.config.password,
+    username: process.env.MMM_LIBRARY_MONITOR_USERNAME || moduleEntry.config.username,
+    password: process.env.MMM_LIBRARY_MONITOR_PASSWORD || moduleEntry.config.password,
   };
 }
 

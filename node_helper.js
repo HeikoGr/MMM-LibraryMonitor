@@ -1,8 +1,25 @@
 const NodeHelper = require("node_helper");
-const { ACCOUNT_STATUS_OK, fetchAccountData } = require("./lib/opac-client");
+const { ACCOUNT_STATUS_OK, ACCOUNT_STATUS_UNAVAILABLE, fetchAccountData } = require("./lib/opac-client");
+const { createInstanceHub, formatLogEntry } = require("./lib/backend-session");
+const { resolveAccountConfigs } = require("./lib/library-config");
 const { createCoverProxy } = require("./lib/cover-proxy");
 const { createResultCache } = require("./lib/result-cache");
 const shared = require("./lib/mmm-shared/mmm-shared");
+
+// MagicMirror's logger carries the global logLevel; outside MagicMirror (tests) console.
+const Log = (() => {
+  try {
+    return require("logger");
+  } catch {
+    return console;
+  }
+})();
+
+// One line per entry. Defined in this file on purpose: MagicMirror tags each line
+// with the folder of the file that calls Log, so it reads [MMM-...], not [mmm-shared].
+const logSink = Object.fromEntries(
+  ["debug", "info", "warn", "error"].map((method) => [method, (entry) => Log[method](formatLogEntry(entry))]),
+);
 
 /**
  * The shared default list stops at `password`, but a library card number is a
@@ -38,37 +55,112 @@ function summarizeAccount(account) {
   ].join(", ");
 }
 
+/** Two displays of one instance must read the same library accounts. */
+const CRITICAL_CONFIG_KEYS = Object.freeze([
+  "libraryConfig",
+  "libraryConfigFile",
+  "accounts",
+  "username",
+  "password",
+  "account",
+]);
+
+/**
+ * Nothing usable came back: every account is unavailable. The data still goes
+ * out (the frontend keeps each account's previous state), but it counts as a
+ * failed fetch for the backoff and the retry.
+ */
+function isTotalFailure(data) {
+  const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+  return accounts.length > 0 && accounts.every((account) => account?.status === ACCOUNT_STATUS_UNAVAILABLE);
+}
+
+/**
+ * Send at most maxItems loans and reservations per account (MODULE-PLAN C2);
+ * the frontend only needs the number of the rest for its "+N more" line.
+ */
+function limitItems(data, maxItems) {
+  const limit = Number(maxItems);
+  if (!Number.isFinite(limit) || limit < 0 || !Array.isArray(data?.accounts)) {
+    return data;
+  }
+
+  const cut = (list) => (Array.isArray(list) ? list.slice(0, limit) : list);
+  const rest = (list) => (Array.isArray(list) ? Math.max(0, list.length - limit) : 0);
+
+  return {
+    ...data,
+    accounts: data.accounts.map((account) => ({
+      ...account,
+      items: cut(account.items),
+      reservations: cut(account.reservations),
+      moreItems: rest(account.items),
+      moreReservations: rest(account.reservations),
+    })),
+  };
+}
+
 function isCompleteResult(data) {
-  return (
-    Array.isArray(data?.accounts) &&
-    data.accounts.every((account) => account?.status === ACCOUNT_STATUS_OK)
-  );
+  return Array.isArray(data?.accounts) && data.accounts.every((account) => account?.status === ACCOUNT_STATUS_OK);
 }
 
 module.exports = NodeHelper.create({
   start() {
-    this.notifications = shared.buildNotifications("MMM-LibraryMonitor");
-    this.transport = shared.createNodeTransport({
-      moduleName: "MMM-LibraryMonitor",
-      sendSocketNotification: this.sendSocketNotification.bind(this),
-    });
-    this.errorFactory = shared.createErrorFactory();
+    // The module's own logLevel arrives with CONFIGURE; until then only the
+    // global level applies ("debug" = no extra filter).
+    this.logLevel = undefined;
     this.logger = shared.createLogger({
       moduleName: "MMM-LibraryMonitor",
       identifier: "node_helper",
-      getLevel: () => "info",
+      consoleRef: logSink,
+      getLevel: () => this.logLevel || "debug",
       structured: true,
       redact: true,
       redactedKeys: REDACTED_LOG_KEYS,
     });
-    this.instanceRegistry = shared.createInstanceRegistry({ mode: "auto" });
-    this.pendingRequests = new Map();
     this.resultCache = createResultCache();
     this.coverProxy = createCoverProxy({
       expressApp: this.expressApp,
       moduleName: this.name,
       logger: this.logger,
     });
+
+    /*
+     * The frontend sends its config once (CONFIGURE) and reports whether it is
+     * visible (SESSION_STATE). The hub runs one backend schedule per instance
+     * (6 h anchored grid by default), retries a failed refresh with backoff and
+     * pushes the result as DATA events.
+     */
+    this.hub = createInstanceHub({
+      moduleName: "MMM-LibraryMonitor",
+      sendSocketNotification: this.sendSocketNotification.bind(this),
+      logger: this.logger,
+      criticalKeys: CRITICAL_CONFIG_KEYS,
+      prepareConfig: (config) => {
+        // Throws for an unsupported or incomplete library config.
+        resolveAccountConfigs(config);
+        return { ...config };
+      },
+      lifecycleOptions: (config) => ({
+        updateInterval: config.updateInterval,
+        minUpdateInterval: 60 * 1000,
+        anchorHour: config.updateAnchorHour,
+        backgroundRefresh: config.backgroundRefresh !== false,
+        quietHours: config.quietHours,
+      }),
+      isFailure: isTotalFailure,
+      onConfigured: (_identifier, config) => {
+        this.logLevel = config.logLevel;
+      },
+      fetch: ({ identifier, config, reason }) => this.updateAccount(identifier, config, reason),
+      // Tests inject a clock and timers here.
+      ...this.hubOptions,
+    });
+    this.hub.attach(this.io);
+  },
+
+  stop() {
+    this.hub?.stop();
   },
 
   /**
@@ -93,67 +185,18 @@ module.exports = NodeHelper.create({
       ...data,
       accounts: data.accounts.map((account) => ({
         ...account,
-        items: Array.isArray(account.items)
-          ? account.items.map(mapItem)
-          : account.items,
-        reservations: Array.isArray(account.reservations)
-          ? account.reservations.map(mapItem)
-          : account.reservations,
+        items: Array.isArray(account.items) ? account.items.map(mapItem) : account.items,
+        reservations: Array.isArray(account.reservations) ? account.reservations.map(mapItem) : account.reservations,
       })),
     };
   },
 
   socketNotificationReceived(notification, payload) {
-    if (notification !== this.notifications.REQUEST) {
-      return;
-    }
-
-    if (payload?.action !== "FETCH_ACCOUNTS") {
-      return;
-    }
-
-    const moduleId = this.instanceRegistry.resolveKey(
-      payload?.identifier,
-      payload,
-    );
-    const moduleConfig = payload?.data?.config || {};
-    if (this.pendingRequests.has(moduleId)) {
-      this.logger.debug("skip overlapping update", {
-        moduleId,
-        action: payload?.action,
-      });
-      return;
-    }
-
-    this.logger.info("update requested", {
-      moduleId,
-      intervalMs: moduleConfig.updateInterval || null,
-      requestId: payload?.requestId,
-    });
-
-    this.pendingRequests.set(moduleId, true);
-    this.updateAccount(moduleId, moduleConfig, payload)
-      .catch((error) => {
-        this.logger.error("update failed", {
-          moduleId,
-          message: error instanceof Error ? error.message : String(error),
-          requestId: payload?.requestId,
-        });
-        this.transport.sendError(
-          payload,
-          this.errorFactory.fromException(error, {
-            code: "FETCH_FAILED",
-            retryable: true,
-            details: { moduleId },
-          }),
-        );
-      })
-      .finally(() => {
-        this.pendingRequests.delete(moduleId);
-      });
+    // CONFIGURE and SESSION_STATE are the only requests the frontend sends.
+    this.hub.socketNotificationReceived(notification, payload);
   },
 
-  async updateAccount(moduleId, config, requestEnvelope) {
+  async updateAccount(moduleId, config, reason) {
     const startedAt = Date.now();
     this.resultCache.setTtl(config?.resultCacheTtl);
     const cacheKey = this.resultCache.buildCacheKey(config);
@@ -177,6 +220,7 @@ module.exports = NodeHelper.create({
 
     this.logger.info("update finished", {
       moduleId,
+      reason,
       durationMs,
       fromCache,
       totalLoans: Number(data?.totalItems) || 0,
@@ -184,10 +228,6 @@ module.exports = NodeHelper.create({
       accounts: summaries,
     });
 
-    this.instanceRegistry.set(moduleId, { updatedAt: Date.now() });
-    this.transport.sendSuccess(
-      requestEnvelope,
-      this.applyCoverProxy(data, config),
-    );
+    return limitItems(this.applyCoverProxy(data, config), config.maxItems);
   },
 });

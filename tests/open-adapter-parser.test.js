@@ -30,19 +30,12 @@ test("buildLoginRequest preserves hidden fields and injects credentials", () => 
     </html>
   `;
 
-  const request = buildLoginRequest(
-    html,
-    "https://bibliotheken.komm.one/mannheim/de-de/Mein-Konto",
-    {
-      username: "12345",
-      password: "secret",
-    },
-  );
+  const request = buildLoginRequest(html, "https://bibliotheken.komm.one/mannheim/de-de/Mein-Konto", {
+    username: "12345",
+    password: "secret",
+  });
 
-  assert.equal(
-    request.postUrl,
-    "https://bibliotheken.komm.one/mannheim/de-de/Mein-Konto",
-  );
+  assert.equal(request.postUrl, "https://bibliotheken.komm.one/mannheim/de-de/Mein-Konto");
   assert.match(request.body, /__VIEWSTATE=abc123/);
   assert.match(request.body, /txtUsername=12345/);
   assert.match(request.body, /txtPassword=secret/);

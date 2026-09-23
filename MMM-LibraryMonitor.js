@@ -46,7 +46,7 @@ Module.register("MMM-LibraryMonitor", {
     showNotices: false,
     showBookCovers: true,
     hideEmptyAccounts: false,
-    debug: false,
+    logLevel: null, // optional: none | error | warn | info | debug; unset = global logLevel
     dateLocale: "de-DE",
     urgencyThresholdDays: 3,
     // Serve book covers through the mirror instead of letting the browser talk
@@ -64,27 +64,20 @@ Module.register("MMM-LibraryMonitor", {
 
   start() {
     this.shared = globalThis.MMModuleShared;
-    this.sharedContext = this.shared.createModuleContext(
-      "MMM-LibraryMonitor",
-      this.identifier,
-      {
-        instanceId: this.identifier,
-        logLevel: this.config.debug ? "debug" : "info",
-        logStructured: true,
-        logRedaction: true,
-      },
-    );
     this.transport = this.shared.createTransport({
       moduleName: "MMM-LibraryMonitor",
       identifier: this.identifier,
-      instanceId: this.sharedContext.instanceId,
+      instanceId: this.identifier,
       sendSocketNotification: this.sendSocketNotification.bind(this),
     });
     this.notifications = this.transport.notifications;
     this.logger = this.shared.createLogger({
       moduleName: "MMM-LibraryMonitor",
       identifier: this.identifier,
-      getLevel: () => (this.config.debug ? "debug" : "info"),
+      // MagicMirror's Log applies the global logLevel; the module's own
+      // logLevel can only narrow it ("debug" = no extra filter).
+      consoleRef: globalThis.Log || console,
+      getLevel: () => this.config.logLevel || "debug",
       structured: false,
       redact: true,
       redactedKeys: REDACTED_LOG_KEYS,
@@ -95,15 +88,17 @@ Module.register("MMM-LibraryMonitor", {
     this.accountData = null;
     this.lastSuccessfulData = null;
 
+    // The config goes to the backend once; it owns the refresh schedule
+    // (node_helper + lib/backend-session.js) and pushes the accounts.
+    this.sendConfigure();
+
+    // Only rendering and the active/paused report stay in the browser.
     this.lifecycle = this.shared.createLifecycle({
       module: this,
       logger: this.logger,
-      updateInterval: this.config.updateInterval,
-      minUpdateInterval: 60 * 1000,
-      anchorHour: this.config.updateAnchorHour,
+      updateInterval: 0,
       backgroundRefresh: this.config.backgroundRefresh !== false,
-      quietHours: this.config.quietHours,
-      onFetch: () => this.requestUpdate(),
+      onSessionState: ({ state }) => this.transport.sendRequest("SESSION_STATE", { state }),
     });
     this.lifecycle.start();
   },
@@ -131,30 +126,45 @@ Module.register("MMM-LibraryMonitor", {
     this.lifecycle.resume();
   },
 
-  requestUpdate() {
-    this.transport.sendRequest("FETCH_ACCOUNTS", {
-      config: this.config,
-    });
+  /**
+   * Send the config to the backend - at start, and again when the backend asks
+   * for it (INIT_REQUIRED, e.g. after a server restart).
+   */
+  sendConfigure() {
+    this.transport.sendRequest("CONFIGURE", { config: this.config });
   },
 
   socketNotificationReceived(notification, payload) {
-    if (
-      notification === this.notifications.RESPONSE &&
-      payload?.identifier === this.identifier &&
-      payload?.action === "FETCH_ACCOUNTS"
-    ) {
+    if (notification !== this.notifications.EVENT) {
+      return;
+    }
+
+    if (payload?.action === "INIT_REQUIRED") {
+      if (payload.identifier === this.identifier || payload.identifier === "*") {
+        this.sendConfigure();
+      }
+      return;
+    }
+
+    if (payload?.identifier !== this.identifier) {
+      return;
+    }
+
+    if (payload.action === "DATA") {
       this.handleAccountsResponse(payload.data);
       return;
     }
 
     if (
-      notification === this.notifications.ERROR &&
-      payload?.identifier === this.identifier &&
-      payload?.action === "FETCH_ACCOUNTS"
+      payload.action === "FETCH_FAILED" ||
+      payload.action === "CONFIG_INVALID" ||
+      payload.action === "CONFIG_REJECTED"
     ) {
       this.loaded = true;
-      this.lifecycle.markFetchFailed();
-      this.error = this.resolveErrorMessage(payload?.error || payload);
+      this.error =
+        payload.action === "CONFIG_REJECTED"
+          ? `Config differs from the running instance: ${(payload.data?.mismatchKeys || []).join(", ")}`
+          : this.resolveErrorMessage(payload?.error || payload);
       if (this.lastSuccessfulData) {
         this.accountData = this.lastSuccessfulData;
       }
@@ -173,14 +183,11 @@ Module.register("MMM-LibraryMonitor", {
     this.loaded = true;
 
     const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
-    const unavailable = accounts.filter((account) =>
-      this.isAccountUnavailable(account),
-    );
+    const unavailable = accounts.filter((account) => this.isAccountUnavailable(account));
 
     if (accounts.length > 0 && unavailable.length === accounts.length) {
-      // Nothing usable came back: treat it like a failed fetch, including the
-      // lifecycle backoff, so a dead OPAC is not polled at full rate.
-      this.lifecycle.markFetchFailed();
+      // Nothing usable came back. The backend backs off and retries on its own;
+      // here only the previous state is kept.
       if (this.lastSuccessfulData) {
         this.error = this.resolveErrorMessage(unavailable[0].error);
         this.accountData = this.lastSuccessfulData;
@@ -229,11 +236,7 @@ Module.register("MMM-LibraryMonitor", {
       return kept ? { ...kept, staleError: account.error } : account;
     });
 
-    const sum = (key) =>
-      accounts.reduce(
-        (total, account) => total + (Number(account[key]) || 0),
-        0,
-      );
+    const sum = (key) => accounts.reduce((total, account) => total + (Number(account[key]) || 0), 0);
 
     return {
       ...data,
@@ -280,9 +283,7 @@ Module.register("MMM-LibraryMonitor", {
       return wrapper;
     }
 
-    const accounts = Array.isArray(this.accountData.accounts)
-      ? this.accountData.accounts
-      : [];
+    const accounts = Array.isArray(this.accountData.accounts) ? this.accountData.accounts : [];
     if (accounts.length === 0) {
       wrapper.classList.add("dimmed", "light", "small");
       wrapper.textContent = this.translate("NO_DATA");
@@ -295,8 +296,7 @@ Module.register("MMM-LibraryMonitor", {
             account.error ||
             account.staleError ||
             (Array.isArray(account.items) && account.items.length > 0) ||
-            (Array.isArray(account.reservations) &&
-              account.reservations.length > 0),
+            (Array.isArray(account.reservations) && account.reservations.length > 0),
         )
       : accounts;
 
@@ -306,15 +306,10 @@ Module.register("MMM-LibraryMonitor", {
 
     const summary = document.createElement("div");
     summary.className = "mmm-library-monitor__summary small light";
-    summary.textContent = this.buildOverallSummaryText(
-      visibleAccounts,
-      accounts,
-    );
+    summary.textContent = this.buildOverallSummaryText(visibleAccounts, accounts);
     wrapper.appendChild(summary);
 
-    const accountSections = visibleAccounts.map((account, index) =>
-      this.createAccountSection(account, index),
-    );
+    const accountSections = visibleAccounts.map((account, index) => this.createAccountSection(account, index));
     // An account error must stay visible even when nothing is on loan anywhere,
     // otherwise a failed login reads as "no items".
     const hasAnythingToShow = accounts.some(
@@ -322,8 +317,7 @@ Module.register("MMM-LibraryMonitor", {
         account.error ||
         account.staleError ||
         (Array.isArray(account.items) && account.items.length > 0) ||
-        (Array.isArray(account.reservations) &&
-          account.reservations.length > 0),
+        (Array.isArray(account.reservations) && account.reservations.length > 0),
     );
 
     if (!hasAnythingToShow) {
@@ -376,9 +370,7 @@ Module.register("MMM-LibraryMonitor", {
     }
 
     if (account.staleError) {
-      section.appendChild(
-        this.createStaleNotice(this.resolveErrorMessage(account.staleError)),
-      );
+      section.appendChild(this.createStaleNotice(this.resolveErrorMessage(account.staleError)));
     }
 
     if (this.config.showNotices && account.warning) {
@@ -389,9 +381,7 @@ Module.register("MMM-LibraryMonitor", {
     }
 
     const loans = Array.isArray(account.items) ? account.items : [];
-    const reservations = Array.isArray(account.reservations)
-      ? account.reservations
-      : [];
+    const reservations = Array.isArray(account.reservations) ? account.reservations : [];
 
     if (loans.length === 0 && reservations.length === 0) {
       const empty = document.createElement("div");
@@ -406,28 +396,18 @@ Module.register("MMM-LibraryMonitor", {
     }
 
     if (reservations.length > 0) {
-      section.appendChild(
-        this.createSubsectionLabel(this.translate("RESERVATIONS_SECTION")),
-      );
+      section.appendChild(this.createSubsectionLabel(this.translate("RESERVATIONS_SECTION")));
       section.appendChild(this.createItemsTable(reservations, "reservation"));
     }
 
-    if (loans.length > this.config.maxItems) {
-      const more = document.createElement("div");
-      more.className = "mmm-library-monitor__more dimmed small";
-      more.textContent = this.translate("MORE_ITEMS", {
-        count: loans.length - this.config.maxItems,
-      });
-      section.appendChild(more);
-    }
-
-    if (reservations.length > this.config.maxItems) {
-      const more = document.createElement("div");
-      more.className = "mmm-library-monitor__more dimmed small";
-      more.textContent = this.translate("MORE_ITEMS", {
-        count: reservations.length - this.config.maxItems,
-      });
-      section.appendChild(more);
+    // The backend sends at most maxItems of each and counts the rest.
+    for (const count of [account.moreItems, account.moreReservations]) {
+      if (Number(count) > 0) {
+        const more = document.createElement("div");
+        more.className = "mmm-library-monitor__more dimmed small";
+        more.textContent = this.translate("MORE_ITEMS", { count });
+        section.appendChild(more);
+      }
     }
 
     return section;
@@ -451,9 +431,7 @@ Module.register("MMM-LibraryMonitor", {
    * @returns {string|null} "overdue", "soon", or null
    */
   resolveUrgency(item, itemType) {
-    const hasDeadline =
-      itemType === "loan" ||
-      (itemType === "reservation" && item.status === "readyForPickup");
+    const hasDeadline = itemType === "loan" || (itemType === "reservation" && item.status === "readyForPickup");
 
     if (!hasDeadline || !Number.isFinite(item.daysRemaining)) {
       return null;
@@ -463,9 +441,7 @@ Module.register("MMM-LibraryMonitor", {
       return "overdue";
     }
 
-    return item.daysRemaining <= this.config.urgencyThresholdDays
-      ? "soon"
-      : null;
+    return item.daysRemaining <= this.config.urgencyThresholdDays ? "soon" : null;
   },
 
   createSubsectionLabel(text) {
@@ -482,15 +458,13 @@ Module.register("MMM-LibraryMonitor", {
     const caption = document.createElement("caption");
     caption.className = "mmm-library-monitor__sr-only";
     caption.textContent = this.translate(
-      itemType === "reservation"
-        ? "TABLE_CAPTION_RESERVATIONS"
-        : "TABLE_CAPTION_LOANS",
+      itemType === "reservation" ? "TABLE_CAPTION_RESERVATIONS" : "TABLE_CAPTION_LOANS",
     );
     table.appendChild(caption);
 
     const tbody = document.createElement("tbody");
 
-    items.slice(0, this.config.maxItems).forEach((item) => {
+    items.forEach((item) => {
       const row = document.createElement("tr");
       row.className = "mmm-library-monitor__row";
 
@@ -514,9 +488,7 @@ Module.register("MMM-LibraryMonitor", {
         // Colour alone must not carry the status.
         const status = document.createElement("span");
         status.className = "mmm-library-monitor__sr-only";
-        status.textContent = ` (${this.translate(
-          urgency === "overdue" ? "STATUS_OVERDUE" : "STATUS_DUE_SOON",
-        )})`;
+        status.textContent = ` (${this.translate(urgency === "overdue" ? "STATUS_OVERDUE" : "STATUS_DUE_SOON")})`;
         dueCell.appendChild(status);
       }
 
@@ -653,9 +625,7 @@ Module.register("MMM-LibraryMonitor", {
       parts.push(this.translate("ACCOUNT_COUNT", { count: accounts.length }));
     }
 
-    parts.push(
-      this.translate("ITEM_COUNT", { count: this.accountData.totalItems || 0 }),
-    );
+    parts.push(this.translate("ITEM_COUNT", { count: this.accountData.totalItems || 0 }));
 
     if (this.accountData.totalReservations) {
       parts.push(
@@ -665,9 +635,7 @@ Module.register("MMM-LibraryMonitor", {
       );
     }
 
-    const errorCount = accounts.filter(
-      (account) => account.error || account.staleError,
-    ).length;
+    const errorCount = accounts.filter((account) => account.error || account.staleError).length;
     if (errorCount > 0) {
       parts.push(this.translate("ACCOUNT_ERRORS", { count: errorCount }));
     }

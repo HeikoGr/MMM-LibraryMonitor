@@ -1,342 +1,343 @@
+/*
+ * The refresh schedule lives in the backend (node_helper + lib/backend-session.js,
+ * MODULE-PLAN C3). These tests drive the real node helper with a stubbed OPAC
+ * client, a fake socket and a deterministic clock, and count OPAC fetches.
+ */
 const test = require("node:test");
 const assert = require("node:assert/strict");
-
-const shared = require("../lib/mmm-shared/mmm-shared");
-
-const modulePath = require.resolve("../MMM-LibraryMonitor.js");
+const Module = require("node:module");
+const { EventEmitter } = require("node:events");
 
 const MINUTE = 60 * 1000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
+const REQUEST = "MMM-LibraryMonitor_REQUEST";
+const IDENTIFIER = "module_0_MMM-LibraryMonitor";
 
-/**
- * Deterministic clock and timer queue, installed as globals so the module's
- * lifecycle picks them up when it is created.
- */
+const LIBRARY_CONFIG = {
+  api: "open",
+  data: {
+    baseurl: "https://bibliotheken.example/stadt/de-de",
+    urls: { account: "Mein-Konto" },
+  },
+};
+
 function createHarness(startTime = new Date(2026, 0, 15, 8, 0, 0).getTime()) {
   let currentTime = startTime;
-  let sequence = 1;
-  const scheduled = new Map();
-
+  const scheduled = new Set();
   return {
     now: () => currentTime,
-    setTimeout(fn, delay) {
-      const id = sequence;
-      sequence += 1;
-      scheduled.set(id, {
-        fn,
-        at: currentTime + Math.max(0, Number(delay) || 0),
-      });
-      return id;
+    timers: {
+      setTimeout(fn, delay) {
+        const entry = { fn, at: currentTime + Math.max(0, Number(delay) || 0) };
+        scheduled.add(entry);
+        return entry;
+      },
+      clearTimeout(entry) {
+        scheduled.delete(entry);
+      },
     },
-    clearTimeout(id) {
-      scheduled.delete(id);
-    },
-    advance(ms) {
+    async advance(ms) {
       const target = currentTime + ms;
       for (;;) {
-        let dueId = null;
-        let dueEntry = null;
-        for (const [id, entry] of scheduled.entries()) {
-          if (
-            entry.at <= target &&
-            (dueEntry === null || entry.at < dueEntry.at)
-          ) {
-            dueId = id;
-            dueEntry = entry;
+        let due = null;
+        for (const entry of scheduled) {
+          if (entry.at <= target && (due === null || entry.at < due.at)) {
+            due = entry;
           }
         }
-
-        if (dueEntry === null) {
+        if (due === null) {
           break;
         }
-
-        scheduled.delete(dueId);
-        currentTime = dueEntry.at;
-        dueEntry.fn();
+        scheduled.delete(due);
+        currentTime = due.at;
+        due.fn();
+        await settle();
       }
-
       currentTime = target;
+      await settle();
     },
   };
 }
 
-function loadModuleDefinition() {
-  let definition = null;
+const settle = async () => {
+  for (let i = 0; i < 5; i++) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+};
 
-  global.Module = {
-    register(_name, moduleDefinition) {
-      definition = moduleDefinition;
-    },
-  };
-
-  delete require.cache[modulePath];
-  require(modulePath);
-  delete require.cache[modulePath];
-  delete global.Module;
-
-  if (!definition) {
-    throw new Error("Failed to load MMM-LibraryMonitor module definition");
+class FakeSocket extends EventEmitter {
+  constructor(id) {
+    super();
+    this.id = id;
+    this.anyHandlers = [];
   }
 
-  return definition;
+  onAny(handler) {
+    this.anyHandlers.push(handler);
+  }
+
+  emit() {
+    return true;
+  }
+
+  send(action, data) {
+    for (const handler of this.anyHandlers) {
+      handler(REQUEST, { identifier: IDENTIFIER, action, data });
+    }
+  }
+}
+
+function createFakeIo() {
+  const namespace = new EventEmitter();
+  namespace.sockets = new Map();
+  return {
+    of: () => namespace,
+    connect(id) {
+      const socket = new FakeSocket(id);
+      namespace.emit("connection", socket);
+      return socket;
+    },
+  };
 }
 
 /**
- * Run `body` with the deterministic clock, a stub logger and the shared library
- * installed as globals.
+ * Load node_helper.js with "node_helper" and the OPAC client stubbed.
+ * `outcome()` decides per fetch whether the OPAC answers.
  */
-function withEnvironment(harness, body) {
-  const originals = {
-    setTimeout: globalThis.setTimeout,
-    clearTimeout: globalThis.clearTimeout,
-    dateNow: Date.now,
-    random: Math.random,
-    shared: globalThis.MMModuleShared,
-    console: { info: console.info, debug: console.debug, warn: console.warn },
-  };
-
-  globalThis.setTimeout = harness.setTimeout;
-  globalThis.clearTimeout = harness.clearTimeout;
-  Date.now = harness.now;
-  Math.random = () => 0.5; // neutral jitter
-  globalThis.MMModuleShared = shared;
-  console.info = () => {};
-  console.debug = () => {};
-  console.warn = () => {};
-
-  try {
-    return body();
-  } finally {
-    globalThis.setTimeout = originals.setTimeout;
-    globalThis.clearTimeout = originals.clearTimeout;
-    Date.now = originals.dateNow;
-    Math.random = originals.random;
-    globalThis.MMModuleShared = originals.shared;
-    console.info = originals.console.info;
-    console.debug = originals.console.debug;
-    console.warn = originals.console.warn;
-  }
-}
-
-function createInstance(configOverrides = {}, { startHidden = false } = {}) {
-  const definition = loadModuleDefinition();
-  const instance = {
-    ...definition,
-    name: "MMM-LibraryMonitor",
-    identifier: "module_0_MMM-LibraryMonitor",
-    defaults: { ...definition.defaults },
-    config: { ...definition.defaults, ...configOverrides },
-    hidden: startHidden,
-    data: { hidden: startHidden },
-    fetchRequests: [],
-    renders: 0,
-    translate: (key) => key,
-    file: (relative) => relative,
-    updateDom() {
-      this.renders += 1;
-    },
-    sendSocketNotification(_notification, payload) {
-      if (payload?.action === "FETCH_ACCOUNTS") {
-        this.fetchRequests.push({ payload, at: Date.now() });
-      }
+function startHelper(harness, outcome = () => "ok") {
+  const helperPath = require.resolve("../node_helper.js");
+  const fetches = [];
+  const opacStub = {
+    ACCOUNT_STATUS_OK: "ok",
+    ACCOUNT_STATUS_UNAVAILABLE: "unavailable",
+    fetchAccountData: async () => {
+      fetches.push(harness.now());
+      const status = outcome(fetches.length);
+      return {
+        accounts: [
+          {
+            id: "account-1",
+            status,
+            error: status === "ok" ? null : "OPAC unreachable",
+            items: [{ title: "A" }, { title: "B" }, { title: "C" }],
+            totalItems: 3,
+          },
+        ],
+        totalItems: 0,
+      };
     },
   };
 
-  return instance;
-}
-
-/** Answer the pending request the way the node helper would. */
-function answerFetch(instance) {
-  instance.socketNotificationReceived(instance.notifications.RESPONSE, {
-    identifier: instance.identifier,
-    action: "FETCH_ACCOUNTS",
-    data: { accounts: [], totalItems: 0 },
-  });
-}
-
-/** Simulate MMM-Carousel showing the module `visibleMs` out of every `cycleMs`. */
-function runCarousel(instance, harness, { cycleMs, visibleMs, durationMs }) {
-  const cycles = Math.floor(durationMs / cycleMs);
-  let answered = 0;
-
-  const drain = () => {
-    while (answered < instance.fetchRequests.length) {
-      answered += 1;
-      answerFetch(instance);
+  const originalLoad = Module._load;
+  Module._load = function load(request, parent, isMain) {
+    if (request === "node_helper") {
+      return { create: (definition) => definition };
     }
+    if (request === "./lib/opac-client") {
+      return opacStub;
+    }
+    return originalLoad.call(this, request, parent, isMain);
   };
+  delete require.cache[helperPath];
+  let definition;
+  try {
+    definition = require(helperPath);
+  } finally {
+    Module._load = originalLoad;
+    delete require.cache[helperPath];
+  }
 
-  drain();
-  for (let i = 0; i < cycles; i += 1) {
-    harness.advance(visibleMs);
-    drain();
-    instance.hidden = true;
-    instance.data.hidden = true;
-    instance.suspend();
+  const helper = Object.create(definition);
+  helper.name = "MMM-LibraryMonitor";
+  helper.pushed = [];
+  helper.sendSocketNotification = (_notification, payload) => helper.pushed.push(payload);
+  helper.io = createFakeIo();
+  helper.hubOptions = {
+    timers: harness.timers,
+    now: harness.now,
+    random: () => 0.5,
+  };
+  helper.start();
+  return { helper, fetches };
+}
 
-    harness.advance(cycleMs - visibleMs);
-    drain();
-    instance.hidden = false;
-    instance.data.hidden = false;
-    instance.resume();
-    drain();
+function configure(socket, overrides = {}) {
+  socket.send("CONFIGURE", {
+    config: {
+      libraryConfig: LIBRARY_CONFIG,
+      username: "123",
+      password: "secret",
+      updateInterval: 6 * HOUR,
+      updateAnchorHour: 7,
+      backgroundRefresh: true,
+      maxItems: 10,
+      resultCacheTtl: 0,
+      ...overrides,
+    },
+  });
+}
+
+/** MMM-Carousel: the display reports paused/active every cycle. */
+async function runCarousel(socket, harness, { cycleMs, visibleMs, durationMs }) {
+  for (let elapsed = 0; elapsed < durationMs; elapsed += cycleMs) {
+    await harness.advance(visibleMs);
+    socket.send("SESSION_STATE", { state: "paused" });
+    await harness.advance(cycleMs - visibleMs);
+    socket.send("SESSION_STATE", { state: "active" });
   }
 }
 
-test("a full day under MMM-Carousel costs four scheduled fetches, not one per cycle", () => {
+test("a full day under MMM-Carousel costs four scheduled fetches, not one per cycle", async () => {
   const harness = createHarness();
+  const { helper, fetches } = startHelper(harness);
+  const socket = helper.io.connect("s1");
+  configure(socket);
+  await settle();
 
-  withEnvironment(harness, () => {
-    const instance = createInstance();
-    instance.start();
-
-    runCarousel(instance, harness, {
-      cycleMs: 50 * 1000,
-      visibleMs: 10 * 1000,
-      durationMs: DAY,
-    });
-
-    // Initial fetch plus the four anchored 6 h slots. The old implementation
-    // produced one fetch per 50 s cycle: 1728 a day.
-    assert.equal(instance.fetchRequests.length, 5);
+  await runCarousel(socket, harness, {
+    cycleMs: 50 * 1000,
+    visibleMs: 10 * 1000,
+    durationMs: DAY,
   });
+
+  // Initial fetch plus the four anchored 6 h slots.
+  assert.equal(fetches.length, 5);
+  helper.stop();
 });
 
-test("the fetch count is independent of the Carousel transition interval", () => {
+test("the fetch count is independent of the Carousel transition interval", async () => {
   const counts = [];
-
   for (const cycleMs of [50 * 1000, 100 * 1000]) {
     const harness = createHarness();
-    withEnvironment(harness, () => {
-      const instance = createInstance();
-      instance.start();
-      runCarousel(instance, harness, {
-        cycleMs,
-        visibleMs: cycleMs / 5,
-        durationMs: DAY,
-      });
-      counts.push(instance.fetchRequests.length);
+    const { helper, fetches } = startHelper(harness);
+    const socket = helper.io.connect("s1");
+    configure(socket);
+    await settle();
+    await runCarousel(socket, harness, {
+      cycleMs,
+      visibleMs: cycleMs / 5,
+      durationMs: DAY,
     });
+    counts.push(fetches.length);
+    helper.stop();
   }
-
   assert.equal(counts[0], counts[1]);
 });
 
-test("starting hidden behaves like starting visible (config.js order does not matter)", () => {
+test("a larger updateInterval actually reduces the number of fetches", async () => {
   const counts = [];
-
-  for (const startHidden of [false, true]) {
-    const harness = createHarness();
-    withEnvironment(harness, () => {
-      const instance = createInstance({}, { startHidden });
-      instance.start();
-      runCarousel(instance, harness, {
-        cycleMs: 50 * 1000,
-        visibleMs: 10 * 1000,
-        durationMs: DAY,
-      });
-      counts.push(instance.fetchRequests.length);
-    });
-  }
-
-  assert.equal(counts[0], counts[1]);
-});
-
-test("a larger updateInterval actually reduces the number of fetches", () => {
-  const counts = [];
-
   for (const updateInterval of [3 * HOUR, 12 * HOUR]) {
     const harness = createHarness();
-    withEnvironment(harness, () => {
-      const instance = createInstance({
-        updateInterval,
-        updateAnchorHour: null,
-      });
-      instance.start();
-      runCarousel(instance, harness, {
-        cycleMs: 50 * 1000,
-        visibleMs: 10 * 1000,
-        durationMs: DAY,
-      });
-      counts.push(instance.fetchRequests.length);
-    });
+    const { helper, fetches } = startHelper(harness);
+    const socket = helper.io.connect("s1");
+    configure(socket, { updateInterval, updateAnchorHour: null });
+    await settle();
+    await harness.advance(DAY);
+    counts.push(fetches.length);
+    helper.stop();
   }
-
   assert.equal(counts[0], 1 + 8);
   assert.equal(counts[1], 1 + 2);
 });
 
-test("quiet hours keep the night free of requests", () => {
+test("quiet hours keep the night free of requests", async () => {
   const harness = createHarness(new Date(2026, 0, 15, 20, 0, 0).getTime());
-
-  withEnvironment(harness, () => {
-    const instance = createInstance({
-      updateInterval: HOUR,
-      updateAnchorHour: null,
-      quietHours: { from: "23:00", to: "06:00" },
-    });
-    instance.start();
-
-    runCarousel(instance, harness, {
-      cycleMs: 50 * 1000,
-      visibleMs: 10 * 1000,
-      durationMs: 12 * HOUR,
-    });
-
-    const hours = instance.fetchRequests.map(({ at }) =>
-      new Date(at).getHours(),
-    );
-    assert.ok(hours.length > 0);
-    assert.equal(
-      hours.filter((hour) => hour >= 23 || hour < 6).length,
-      0,
-      `no requests between 23:00 and 06:00, got ${hours.join(", ")}`,
-    );
-    assert.ok(
-      hours.includes(6),
-      "polling resumes right after the quiet window",
-    );
+  const { helper, fetches } = startHelper(harness);
+  const socket = helper.io.connect("s1");
+  configure(socket, {
+    updateInterval: HOUR,
+    updateAnchorHour: null,
+    quietHours: { from: "23:00", to: "06:00" },
   });
+  await settle();
+  await harness.advance(12 * HOUR);
+
+  const hours = fetches.map((at) => new Date(at).getHours());
+  assert.equal(
+    hours.filter((hour) => hour >= 23 || hour < 6).length,
+    0,
+    `no requests between 23:00 and 06:00, got ${hours.join(", ")}`,
+  );
+  assert.ok(hours.includes(6), "polling resumes right after the quiet window");
+  helper.stop();
 });
 
-test("an error keeps the module from hammering the OPAC on every resume", () => {
+test("a failed first refresh is retried within minutes, not at the next 6 h slot", async () => {
   const harness = createHarness();
+  // e.g. the network is not up yet right after a reboot
+  const { helper, fetches } = startHelper(harness, (n) => (n === 1 ? "unavailable" : "ok"));
+  const socket = helper.io.connect("s1");
+  configure(socket);
+  await settle();
+  assert.equal(fetches.length, 1);
 
-  withEnvironment(harness, () => {
-    const instance = createInstance();
+  await harness.advance(5 * MINUTE);
+  assert.equal(fetches.length, 2, "retried after the backoff");
+  helper.stop();
+});
+
+test("a dead OPAC is retried with growing backoff, not hammered", async () => {
+  const harness = createHarness();
+  const { helper, fetches } = startHelper(harness, () => "unavailable");
+  const socket = helper.io.connect("s1");
+  configure(socket);
+  await settle();
+
+  await harness.advance(HOUR);
+  // 1, 2, 4, 8, 16 min backoff: a handful of attempts in the first hour.
+  assert.ok(fetches.length >= 3 && fetches.length <= 7, `got ${fetches.length}`);
+  helper.stop();
+});
+
+test("the display sends its config once and never asks for data itself", async () => {
+  const definitionPath = require.resolve("../MMM-LibraryMonitor.js");
+  let definition;
+  global.Module = { register: (_name, d) => (definition = d) };
+  delete require.cache[definitionPath];
+  require(definitionPath);
+  delete global.Module;
+
+  const shared = require("../lib/mmm-shared/mmm-shared");
+  const originalShared = globalThis.MMModuleShared;
+  globalThis.MMModuleShared = shared;
+  const sent = [];
+  const instance = {
+    ...definition,
+    name: "MMM-LibraryMonitor",
+    identifier: IDENTIFIER,
+    config: { ...definition.defaults },
+    hidden: false,
+    data: {},
+    translate: (key) => key,
+    updateDom() {},
+    sendSocketNotification: (_notification, payload) => sent.push(payload.action),
+  };
+  try {
     instance.start();
+    instance.suspend();
+    instance.resume();
+  } finally {
+    globalThis.MMModuleShared = originalShared;
+  }
 
-    let answered = 0;
-    const failPending = () => {
-      while (answered < instance.fetchRequests.length) {
-        answered += 1;
-        instance.socketNotificationReceived(instance.notifications.ERROR, {
-          identifier: instance.identifier,
-          action: "FETCH_ACCOUNTS",
-          error: { message: "OPAC unreachable" },
-        });
-      }
-    };
+  assert.deepEqual(sent, ["CONFIGURE", "SESSION_STATE", "SESSION_STATE", "SESSION_STATE"]);
+  instance.lifecycle.stop();
+});
 
-    failPending();
-    for (let i = 0; i < 72; i += 1) {
-      harness.advance(10 * 1000);
-      instance.hidden = true;
-      instance.data.hidden = true;
-      instance.suspend();
-      harness.advance(40 * 1000);
-      instance.hidden = false;
-      instance.data.hidden = false;
-      instance.resume();
-      failPending();
-    }
+test("the backend sends at most maxItems loans and counts the rest", async () => {
+  const harness = createHarness();
+  const { helper } = startHelper(harness);
+  const socket = helper.io.connect("s1");
+  configure(socket, { maxItems: 2 });
+  await settle();
 
-    // One hour of a broken backend: a handful of backed-off retries, not 72.
-    assert.ok(
-      instance.fetchRequests.length <= 8,
-      `expected few retries, got ${instance.fetchRequests.length}`,
-    );
-    assert.ok(instance.fetchRequests.length >= 2);
-  });
+  const data = helper.pushed.find((payload) => payload.action === "DATA").data;
+  assert.deepEqual(
+    data.accounts[0].items.map((item) => item.title),
+    ["A", "B"],
+  );
+  assert.equal(data.accounts[0].moreItems, 1);
+  assert.equal(data.accounts[0].totalItems, 3, "totals stay the real numbers");
+  helper.stop();
 });

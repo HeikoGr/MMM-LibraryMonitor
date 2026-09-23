@@ -1,10 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const {
-  resolveAccountConfigs,
-  resolveLibraryConfig,
-} = require("../lib/library-config");
+const { resolveAccountConfigs, resolveLibraryConfig } = require("../lib/library-config");
 
 test("resolveLibraryConfig returns the inline config object", () => {
   const libraryConfig = resolveLibraryConfig({
@@ -21,10 +18,7 @@ test("resolveLibraryConfig returns the inline config object", () => {
   });
 
   assert.equal(libraryConfig.api, "open");
-  assert.equal(
-    libraryConfig.data.baseurl,
-    "https://bibliotheken.komm.one/mannheim/de-de",
-  );
+  assert.equal(libraryConfig.data.baseurl, "https://bibliotheken.komm.one/mannheim/de-de");
   assert.equal(libraryConfig.data.urls.account, "Mein-Konto");
 });
 
