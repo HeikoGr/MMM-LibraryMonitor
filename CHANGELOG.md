@@ -8,6 +8,18 @@ All notable changes to this project will be documented in this file.
 - Switched the backend HTTP client from node-fetch to the built-in fetch API.
 - Added documentation and community support files.
 
+## [0.5.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.4.0...v0.5.0) (2026-09-23)
+
+
+### 🔌 Features
+
+* backend-owned updates with retry, logLevel instead of debug, MagicMirror's Log ([78b3dcf](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/78b3dcfb0b4444c03fbce6702b093f8d4cc76672))
+
+
+### 🧱 Refactoring
+
+* load backend-session.js from the mmm-shared submodule (S5) ([26a2cb5](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/26a2cb5948ae057d3d9a993d37b28955fcbf2acc))
+
 ## [0.4.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.3.0...v0.4.0) (2026-09-22)
 
 
