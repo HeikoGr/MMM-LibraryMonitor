@@ -74,10 +74,9 @@ Module.register("MMM-LibraryMonitor", {
     this.logger = this.shared.createLogger({
       moduleName: "MMM-LibraryMonitor",
       identifier: this.identifier,
-      // MagicMirror's Log applies the global logLevel; the module's own
-      // logLevel can only narrow it ("debug" = no extra filter).
-      consoleRef: globalThis.Log || console,
-      getLevel: () => this.config.logLevel || "debug",
+      // Writes through MagicMirror's Log (global logLevel); the module's own
+      // logLevel can only narrow it.
+      getLevel: () => this.config.logLevel,
       structured: false,
       redact: true,
       redactedKeys: REDACTED_LOG_KEYS,
@@ -89,7 +88,7 @@ Module.register("MMM-LibraryMonitor", {
     this.lastSuccessfulData = null;
 
     // The config goes to the backend once; it owns the refresh schedule
-    // (node_helper + lib/backend-session.js) and pushes the accounts.
+    // (node_helper + lib/mmm-shared/backend-session.js) and pushes the accounts.
     this.sendConfigure();
 
     // Only rendering and the active/paused report stay in the browser.

@@ -1,5 +1,5 @@
 /*
- * The refresh schedule lives in the backend (node_helper + lib/backend-session.js,
+ * The refresh schedule lives in the backend (node_helper + lib/mmm-shared/backend-session.js,
  * MODULE-PLAN C3). These tests drive the real node helper with a stubbed OPAC
  * client, a fake socket and a deterministic clock, and count OPAC fetches.
  */

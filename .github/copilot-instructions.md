@@ -20,13 +20,13 @@
 - Shared infrastructure comes from the `lib/mmm-shared` submodule (`createTransport`,
   `createLogger`, `createLifecycle`). Do not change it here.
 - The backend owns the schedule (MODULE-PLAN C1-C3): the frontend sends `CONFIGURE` once and
-  `SESSION_STATE` (active/paused). `lib/backend-session.js` runs a `createLifecycle` per
+  `SESSION_STATE` (active/paused). `lib/mmm-shared/backend-session.js` runs a `createLifecycle` per
   instance in `node_helper` (6 h grid anchored at `updateAnchorHour`, jitter, `quietHours`),
   retries a refresh in which every account failed with a growing backoff, and pushes the
   result as a `DATA` event. The frontend lifecycle has no `onFetch`; it only gates rendering
   (`lifecycle.render()`). Do not add own timers or suspend/resume logic.
-- `lib/backend-session.js` and `tests/backend-session.test.js` are module-local copies shared
-  with MMM-CalDAV-Tasks, MMM-HomeConnect2 and MMM-Photoprism2; change all copies together.
+- `backend-session.js` comes from the `lib/mmm-shared` submodule (tests there); change it in the
+  mmm-shared repo.
 - One adapter per library system under `lib/adapters/<system>/` (`validateConfig`,
   `buildAccountUrl`, `resumeSession`, `login`, parser), registered in `lib/adapters/index.js`.
   Adapters return the normalised item shape; frontend and scheduler stay unchanged.

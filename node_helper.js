@@ -1,6 +1,6 @@
 const NodeHelper = require("node_helper");
 const { ACCOUNT_STATUS_OK, ACCOUNT_STATUS_UNAVAILABLE, fetchAccountData } = require("./lib/opac-client");
-const { createInstanceHub, formatLogEntry } = require("./lib/backend-session");
+const { createInstanceHub, formatLogEntry } = require("./lib/mmm-shared/backend-session");
 const { resolveAccountConfigs } = require("./lib/library-config");
 const { createCoverProxy } = require("./lib/cover-proxy");
 const { createResultCache } = require("./lib/result-cache");
@@ -107,13 +107,13 @@ function isCompleteResult(data) {
 module.exports = NodeHelper.create({
   start() {
     // The module's own logLevel arrives with CONFIGURE; until then only the
-    // global level applies ("debug" = no extra filter).
+    // global level applies.
     this.logLevel = undefined;
     this.logger = shared.createLogger({
       moduleName: "MMM-LibraryMonitor",
       identifier: "node_helper",
       consoleRef: logSink,
-      getLevel: () => this.logLevel || "debug",
+      getLevel: () => this.logLevel,
       structured: true,
       redact: true,
       redactedKeys: REDACTED_LOG_KEYS,
