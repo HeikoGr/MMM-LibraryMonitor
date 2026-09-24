@@ -4,7 +4,7 @@ MMM-LibraryMonitor shows borrowed items, due dates, reservations, and account su
 
 ## Screenshot
 
-![MMM-LibraryMonitor](https://raw.githubusercontent.com/HeikoGr/MMM-LibraryMonitor/main/preview.png)
+![MMM-LibraryMonitor](https://raw.githubusercontent.com/HeikoGr/MMM-LibraryMonitor/main/img/screenshot.png)
 
 Use this wiki if you want to:
 

@@ -4,7 +4,7 @@ MagicMirror module to display borrowed library items, due dates, reservations, a
 
 ## Screenshot
 
-![MMM-LibraryMonitor](preview.png)
+![MMM-LibraryMonitor](img/screenshot.png)
 
 ## Installation
 
