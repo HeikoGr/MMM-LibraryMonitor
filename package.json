@@ -24,7 +24,7 @@
   ],
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.21.1"
   },
   "scripts": {
     "prepare": "node scripts/install-hooks.js",
