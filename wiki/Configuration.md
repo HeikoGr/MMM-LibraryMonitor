@@ -42,7 +42,7 @@ day per host) because credentials then travel unencrypted.
 | `urgencyThresholdDays` | Highlight items whose deadline is this many days away or closer. Applies to loans and to reservations that are ready for pickup; a pending reservation has no deadline and is never highlighted. |
 | `maxConcurrentAccounts` | How many accounts may be fetched at the same time. Default `2`, so a family of cards does not hit the OPAC with simultaneous logins. |
 | `accountStaggerMs` | Delay between the start of each parallel fetch slot. Default `750`. |
-| `resultCacheTtl` | How long a fetched result is reused before the module logs in again, in milliseconds. Default `5 min`; `0` disables the cache. A browser reload or a second mirror client is served from this cache. |
+| `resultCacheTtl` | How long a fetched result is reused before the module logs in again, in milliseconds. Default `5 min`; `0` disables the cache. It only takes effect when two module instances read the same accounts; a browser reload or a second display of one instance already gets the last result from the backend without a new login. |
 
 ## Display Options
 
@@ -76,8 +76,9 @@ day per host) because credentials then travel unencrypted.
   only reports whether the module is visible; several displays of one instance
   share one schedule. The backend sends at most `maxItems` loans and reservations
   per account plus the number of the rest.
-- Results with a failed account are not put into the result cache, so a reload
-  after an OPAC outage retries instead of replaying the error.
+- A browser reload does not trigger a new fetch: the backend sends the last result
+  it has. Results with a failed account are not put into the result cache, so the
+  retry after an outage really logs in again.
 - Sessions are reused between refreshes. A refresh costs one request while the
   OPAC session is still valid, and falls back to a full login when it is not.
 - If an OPAC host presents a missing, expired or untrusted TLS certificate, the

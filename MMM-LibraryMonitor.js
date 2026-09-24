@@ -141,6 +141,8 @@ Module.register("MMM-LibraryMonitor", {
     if (payload?.action === "INIT_REQUIRED") {
       if (payload.identifier === this.identifier || payload.identifier === "*") {
         this.sendConfigure();
+        // A restarted backend has lost the paused state too.
+        this.lifecycle?.reportSessionState?.("init-required");
       }
       return;
     }
