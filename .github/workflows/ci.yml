@@ -29,8 +29,8 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
-          # Test the minimum version declared in package.json engines, not the latest.
-          # Otherwise the supported floor is never actually exercised.
+          # Pinned to a patch release for reproducible runs. package.json engines follows
+          # MagicMirror's own floor (>=22.21.1); that exact floor is not exercised here.
           node-version: '22.22.2'
           cache: npm
 
@@ -40,7 +40,7 @@ jobs:
       - name: Lint
         run: node --run lint
 
-      # Run the suite twice. Due-date handling (computeDayDelta in lib/open-account-parser.js)
+      # Run the suite twice. Due-date handling (computeDayDelta in lib/adapters/open/parser.js)
       # mixes local calendar components with UTC math, so a bug in it is only visible when the
       # host clock differs from the zone the library actually operates in - a UTC-only run cannot
       # see it. Europe/Berlin is the zone virtually every installation runs in; UTC is pinned
