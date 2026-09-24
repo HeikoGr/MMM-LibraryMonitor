@@ -59,6 +59,7 @@ day per host) because credentials then travel unencrypted.
 | `hideEmptyAccounts` | Hide accounts without loans and without errors. |
 | `logLevel` | Optional: `none`, `error`, `warn`, `info` or `debug`. All output goes through MagicMirror's `Log`, so the global `logLevel` in `config.js` decides (debug output such as session reuse and cover proxy failures needs `DEBUG` there); this option can only narrow it for this module. Unset means the global level alone. With several instances, the backend follows the most recent request. Replaces the former `debug` option. |
 | `dateLocale` | Locale used for due-date formatting. |
+| `animationSpeed` | Fade duration in milliseconds when the display redraws after new data or an error. Default `1000`. |
 
 ## Behavior Notes
 
