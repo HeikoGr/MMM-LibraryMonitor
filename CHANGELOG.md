@@ -8,6 +8,18 @@ All notable changes to this project will be documented in this file.
 - Switched the backend HTTP client from node-fetch to the built-in fetch API.
 - Added documentation and community support files.
 
+## [0.5.1](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.5.0...v0.5.1) (2026-09-24)
+
+
+### 🐛 Fixes
+
+* re-report the paused state on a backend restart (mmm-shared 0.3.0 c310517) ([84423b2](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/84423b2767fc42e5a4026a93a1de3a027981ac7e))
+
+
+### 🔧 Tooling
+
+* assign release-please's PR to HeikoGr ([103037c](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/103037cbe0265edf0de357a4a7a8baf993ecf43d))
+
 ## [0.5.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.4.0...v0.5.0) (2026-09-23)
 
 
