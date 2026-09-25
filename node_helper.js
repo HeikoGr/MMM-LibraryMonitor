@@ -4,6 +4,7 @@ const { createInstanceHub, formatLogEntry } = require("./lib/mmm-shared/backend-
 const { resolveAccountConfigs } = require("./lib/library-config");
 const { createCoverProxy } = require("./lib/cover-proxy");
 const shared = require("./lib/mmm-shared/mmm-shared");
+const { REDACTED_LOG_KEYS } = require("./lib/log-redaction");
 
 // MagicMirror's logger carries the global logLevel; outside MagicMirror (tests) console.
 const Log = (() => {
@@ -19,22 +20,6 @@ const Log = (() => {
 const logSink = Object.fromEntries(
   ["debug", "info", "warn", "error"].map((method) => [method, (entry) => Log[method](formatLogEntry(entry))]),
 );
-
-/**
- * The shared default list stops at `password`, but a library card number is a
- * personal identifier in its own right and must not reach the log either.
- */
-const REDACTED_LOG_KEYS = [
-  "password",
-  "token",
-  "apikey",
-  "secret",
-  "qrcode",
-  "refreshtoken",
-  "username",
-  "cardnumber",
-  "credentials",
-];
 
 function getAccountName(account) {
   return account?.label || account?.id || "account";

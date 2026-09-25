@@ -6,7 +6,8 @@
 - Keep changes minimal and directly related to the request/issue.
 - Do not introduce new dependencies unless explicitly required; if you do, update `package.json` (and existing lockfiles).
 - Never commit secrets (tokens, API keys, session cookies, personal data). Library card
-  numbers and passwords count as secrets; they must never reach a log (`REDACTED_LOG_KEYS`).
+  numbers and passwords count as secrets; they must never reach a log (`REDACTED_LOG_KEYS` in
+  `lib/log-redaction.js`, loaded by both the frontend and the node_helper).
 
 ## MagicMirror module conventions
 
@@ -38,7 +39,8 @@
   account, plus `moreItems`/`moreReservations` for the "+N more" line.
 - TLS: full verification by default, `libraryConfig.data.ca` pins a certificate,
   `customssl: true` disables verification (discouraged; `lib/tls-trust.js`). The certificate
-  probe in `lib/tls-probe.js` is diagnostic only and runs once per host and day.
+  probe in `lib/tls-probe.js` is diagnostic only and runs once per host and day (the cadence is
+  `shouldProbe()` in `lib/opac-client.js`; the probe itself does not cache).
 - Book covers go through `lib/cover-proxy.js` (only URLs seen in a scraped page, image
   content types, size limit), so the cover supplier does not see the household's loans.
 - The DOM is built with `createElement`/`textContent`; scraped values never go through

@@ -2,6 +2,9 @@ const shared = require("../../lib/mmm-shared/mmm-shared");
 
 const modulePath = require.resolve("../../MMM-LibraryMonitor.js");
 
+// getScripts() loads lib/log-redaction.js before the module; in the browser it sets this global.
+globalThis.LibraryMonitorLogRedaction = require("../../lib/log-redaction");
+
 /** Capture the object passed to `Module.register`. */
 function loadModuleDefinition() {
   let definition = null;
