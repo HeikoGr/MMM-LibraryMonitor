@@ -4,22 +4,6 @@ const PLACEHOLDER_COVER_URL = `data:image/svg+xml;charset=UTF-8,${encodeURICompo
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 46"><rect width="32" height="46" rx="3" fill="#202632"/><rect x="5" y="6" width="22" height="34" rx="2" fill="#425064"/><rect x="8" y="6" width="2" height="34" rx="1" fill="#d8b36a"/><path d="M12 15h10M12 20h10M12 25h7" stroke="#dce4f0" stroke-width="1.5" stroke-linecap="round"/></svg>',
 )}`;
 
-/**
- * The shared default list stops at `password`, but a library card number is a
- * personal identifier in its own right and must not reach the log either.
- */
-const REDACTED_LOG_KEYS = [
-  "password",
-  "token",
-  "apikey",
-  "secret",
-  "qrcode",
-  "refreshtoken",
-  "username",
-  "cardnumber",
-  "credentials",
-];
-
 Module.register("MMM-LibraryMonitor", {
   defaults: {
     libraryConfig: null,
@@ -76,7 +60,7 @@ Module.register("MMM-LibraryMonitor", {
       getLevel: () => this.config.logLevel,
       structured: false,
       redact: true,
-      redactedKeys: REDACTED_LOG_KEYS,
+      redactedKeys: globalThis.LibraryMonitorLogRedaction.REDACTED_LOG_KEYS,
     });
 
     this.loaded = false;
@@ -95,12 +79,20 @@ Module.register("MMM-LibraryMonitor", {
       updateInterval: 0,
       backgroundRefresh: this.config.backgroundRefresh !== false,
       onSessionState: ({ state }) => this.transport.sendRequest("SESSION_STATE", { state }),
+      // "due today" / "overdue" follow the calendar day, not the next fetch (up to 6 h away,
+      // longer with quietHours). Visual only: runs while visible and redraws on a new day.
+      visibleTickInterval: 60 * 1000,
+      onVisibleTick: () => {
+        if (this.accountData && this.renderedDay !== this.todayUtc()) {
+          this.lifecycle.render(this.config.animationSpeed);
+        }
+      },
     });
     this.lifecycle.start();
   },
 
   getScripts() {
-    return [this.file("lib/mmm-shared/mmm-shared.js")];
+    return [this.file("lib/mmm-shared/mmm-shared.js"), this.file("lib/log-redaction.js")];
   },
 
   getStyles() {
@@ -198,6 +190,14 @@ Module.register("MMM-LibraryMonitor", {
       return;
     }
 
+    // Stamp the day each fresh item arrived; a kept (stale) account keeps its own stamp.
+    const receivedDay = this.todayUtc();
+    for (const fresh of accounts.filter((entry) => !this.isAccountUnavailable(entry))) {
+      for (const item of [...(fresh.items || []), ...(fresh.reservations || [])]) {
+        item.receivedDay = receivedDay;
+      }
+    }
+
     const merged = this.mergeWithPrevious(data, this.lastSuccessfulData);
     this.error = null;
     this.accountData = merged;
@@ -288,14 +288,9 @@ Module.register("MMM-LibraryMonitor", {
       return wrapper;
     }
 
+    this.renderedDay = this.todayUtc();
     const visibleAccounts = this.config.hideEmptyAccounts
-      ? accounts.filter(
-          (account) =>
-            account.error ||
-            account.staleError ||
-            (Array.isArray(account.items) && account.items.length > 0) ||
-            (Array.isArray(account.reservations) && account.reservations.length > 0),
-        )
+      ? accounts.filter((account) => this.hasSomethingToShow(account))
       : accounts;
 
     if (this.error) {
@@ -310,15 +305,7 @@ Module.register("MMM-LibraryMonitor", {
     const accountSections = visibleAccounts.map((account, index) => this.createAccountSection(account, index));
     // An account error must stay visible even when nothing is on loan anywhere,
     // otherwise a failed login reads as "no items".
-    const hasAnythingToShow = accounts.some(
-      (account) =>
-        account.error ||
-        account.staleError ||
-        (Array.isArray(account.items) && account.items.length > 0) ||
-        (Array.isArray(account.reservations) && account.reservations.length > 0),
-    );
-
-    if (!hasAnythingToShow) {
+    if (!accounts.some((account) => this.hasSomethingToShow(account))) {
       const empty = document.createElement("div");
       empty.className = "mmm-library-monitor__empty dimmed light small";
       empty.textContent = this.translate("NO_ITEMS");
@@ -331,6 +318,39 @@ Module.register("MMM-LibraryMonitor", {
     });
 
     return wrapper;
+  },
+
+  /**
+   * An account is worth a section when it has an error or anything on loan or reserved.
+   * @param {object} account - Account as delivered by the backend
+   * @returns {boolean} True when the account has something to show
+   */
+  hasSomethingToShow(account) {
+    return Boolean(
+      account.error ||
+        account.staleError ||
+        (Array.isArray(account.items) && account.items.length > 0) ||
+        (Array.isArray(account.reservations) && account.reservations.length > 0),
+    );
+  },
+
+  /** @returns {number} Today's calendar date as a UTC timestamp (same convention as the backend) */
+  todayUtc() {
+    const now = new Date();
+    return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  },
+
+  /**
+   * The backend's daysRemaining, moved on by the days since the item arrived: after midnight a
+   * loan due "today" is overdue without waiting for the next fetch.
+   * @param {object} item - Loan or reservation (receivedDay set in handleAccountsResponse)
+   * @returns {number} Whole days, negative when the date has passed
+   */
+  daysRemaining(item) {
+    if (!Number.isFinite(item.daysRemaining) || !Number.isFinite(item.receivedDay)) {
+      return item.daysRemaining;
+    }
+    return item.daysRemaining - Math.round((this.todayUtc() - item.receivedDay) / 86400000);
   },
 
   createAccountSection(account, index) {
@@ -430,16 +450,17 @@ Module.register("MMM-LibraryMonitor", {
    */
   resolveUrgency(item, itemType) {
     const hasDeadline = itemType === "loan" || (itemType === "reservation" && item.status === "readyForPickup");
+    const daysRemaining = this.daysRemaining(item);
 
-    if (!hasDeadline || !Number.isFinite(item.daysRemaining)) {
+    if (!hasDeadline || !Number.isFinite(daysRemaining)) {
       return null;
     }
 
-    if (item.isOverdue) {
+    if (daysRemaining < 0) {
       return "overdue";
     }
 
-    return item.daysRemaining <= this.config.urgencyThresholdDays ? "soon" : null;
+    return daysRemaining <= this.config.urgencyThresholdDays ? "soon" : null;
   },
 
   createSubsectionLabel(text) {
@@ -726,10 +747,13 @@ Module.register("MMM-LibraryMonitor", {
     }
 
     try {
+      // A plain "YYYY-MM-DD" parses as UTC midnight; formatting it in the browser's zone would
+      // show the day before anywhere west of UTC.
       return new Intl.DateTimeFormat(this.getDateLocale(), {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
+        timeZone: "UTC",
       }).format(parsed);
     } catch {
       // A bad dateLocale must not take the whole mirror render down.
@@ -743,12 +767,13 @@ Module.register("MMM-LibraryMonitor", {
     }
 
     const formattedDate = this.formatDate(item.dueDate);
+    const daysRemaining = this.daysRemaining(item);
 
-    if (item.isOverdue) {
+    if (daysRemaining < 0) {
       return this.translate("OVERDUE_ON", { date: formattedDate });
     }
 
-    if (item.daysRemaining === 0) {
+    if (daysRemaining === 0) {
       return this.translate("DUE_TODAY", { date: formattedDate });
     }
 

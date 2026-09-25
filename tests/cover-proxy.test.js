@@ -104,3 +104,31 @@ test("an announced oversize cover is refused before its body is read", async () 
     await supplier.close();
   }
 });
+
+test("a failed cover request releases its connection instead of leaving the body unread", async () => {
+  let socketClosed = false;
+  const server = http.createServer((req, res) => {
+    req.socket.once("close", () => (socketClosed = true));
+    res.writeHead(404, { "content-type": "text/html" });
+    const chunk = Buffer.alloc(64 * 1024, 32);
+    const pump = () => {
+      while (res.write(chunk)) {
+        // keep the body flowing until the client stops reading
+      }
+      res.once("drain", pump);
+    };
+    pump();
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const app = fakeExpressApp();
+  const proxy = createCoverProxy({ expressApp: app });
+  try {
+    const res = await app.request(proxy.register(`http://127.0.0.1:${server.address().port}/missing.png`));
+    assert.equal(res.statusCode, 502);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.ok(socketClosed, "the unread error body must not keep the connection busy");
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

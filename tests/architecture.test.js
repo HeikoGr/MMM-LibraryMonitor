@@ -119,19 +119,14 @@ test("certificate problems are described only when something is wrong", () => {
   );
 });
 
-test("frontend and node_helper redact the same log keys", () => {
-  // The list exists twice because the frontend runs in the browser and cannot
-  // require() a shared file. This test keeps the two copies from drifting.
+test("frontend and node_helper redact the same log keys from one file", () => {
   const fs = require("node:fs");
   const path = require("node:path");
-  const extract = (file) => {
-    const source = fs.readFileSync(path.join(__dirname, "..", file), "utf8");
-    const match = source.match(/const REDACTED_LOG_KEYS = \[([\s\S]*?)\];/);
-    assert.ok(match, `${file} defines REDACTED_LOG_KEYS`);
-    return [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
-  };
+  const read = (file) => fs.readFileSync(path.join(__dirname, "..", file), "utf8");
+  const { REDACTED_LOG_KEYS } = require("../lib/log-redaction");
 
-  const frontend = extract("MMM-LibraryMonitor.js");
-  assert.ok(frontend.includes("cardnumber"));
-  assert.deepEqual(extract("node_helper.js"), frontend);
+  assert.ok(REDACTED_LOG_KEYS.includes("cardnumber"));
+  assert.match(read("node_helper.js"), /require\("\.\/lib\/log-redaction"\)/);
+  assert.match(read("MMM-LibraryMonitor.js"), /this\.file\("lib\/log-redaction\.js"\)/);
+  assert.doesNotMatch(read("MMM-LibraryMonitor.js"), /const REDACTED_LOG_KEYS/);
 });

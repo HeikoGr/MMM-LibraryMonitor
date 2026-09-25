@@ -404,3 +404,31 @@ test("dates follow MagicMirror's locale unless dateLocale is set", () => {
     delete globalThis.config;
   }
 });
+
+test("a plain date keeps its day in a time zone west of UTC", () => {
+  const previousTz = process.env.TZ;
+  process.env.TZ = "America/New_York";
+  try {
+    const renderer = createRenderer({ dateLocale: "de-DE" });
+    assert.equal(renderer.formatDate("2026-10-01"), "01.10.2026");
+  } finally {
+    process.env.TZ = previousTz;
+  }
+});
+
+test("after midnight a loan due today reads as overdue without a new fetch", () => {
+  const renderer = createRenderer();
+  const yesterday = renderer.todayUtc() - 86400000;
+  const item = loan({ dueDate: "2026-10-16", daysRemaining: 0, isOverdue: false, receivedDay: yesterday });
+
+  assert.equal(renderer.daysRemaining(item), -1);
+  assert.equal(renderer.resolveUrgency(item, "loan"), "overdue");
+  assert.equal(renderer.formatDueDate(item), "OVERDUE_ON");
+});
+
+test("fresh items are stamped with the day they arrived", () => {
+  const renderer = createRenderer();
+  renderer.handleAccountsResponse({ accounts: [account({ items: [loan()] })] });
+
+  assert.equal(renderer.accountData.accounts[0].items[0].receivedDay, renderer.todayUtc());
+});

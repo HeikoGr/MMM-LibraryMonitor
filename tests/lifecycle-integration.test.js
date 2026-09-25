@@ -300,6 +300,8 @@ test("the display sends its config once and never asks for data itself", async (
   const shared = require("../lib/mmm-shared/mmm-shared");
   const originalShared = globalThis.MMModuleShared;
   globalThis.MMModuleShared = shared;
+  // Loaded by getScripts() in the browser.
+  globalThis.LibraryMonitorLogRedaction = require("../lib/log-redaction");
   const sent = [];
   const instance = {
     ...definition,
