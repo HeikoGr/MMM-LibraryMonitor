@@ -8,6 +8,39 @@ All notable changes to this project will be documented in this file.
 - Switched the backend HTTP client from node-fetch to the built-in fetch API.
 - Added documentation and community support files.
 
+## [0.6.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.5.1...v0.6.0) (2026-09-25)
+
+
+### 🔌 Features
+
+* follow MagicMirror's locale for dates and log each instance at its own logLevel ([67539e3](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/67539e349c4cdaee353b911a92c601b76c35127d))
+
+
+### 🐛 Fixes
+
+* **opac:** keep user-agent and language headers on the login request ([7f7d5b6](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/7f7d5b6942adec9bfd96e0fe322d239d83782e07))
+* re-probe certificates daily, show due dates correctly across time zones and midnight ([#26](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/26)) ([543153c](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/543153caa8fd824b4f536e4909e440b74f1056de))
+* update image link in Home.md to use raw GitHub URL ([211cc41](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/211cc418d44878865be6dfa9e1f6c20c72b7aa56))
+
+
+### 📚 Documentation
+
+* add an anonymized screenshot under img/ ([396a989](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/396a9893d1c6cbafb610779bfc63851ae780c050))
+* **config:** document animationSpeed ([d41e658](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/d41e658b24547d8b92fd315dc3fbdbdef76f2d9f))
+
+
+### 📦 Build & Dependencies
+
+* **deps:** require MagicMirror's node version ([58de159](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/58de159fbb251a6e91d0d14bf1b4d1dea1c08f80))
+
+
+### 🔧 Tooling
+
+* develop branch model and PR title check ([8956a32](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/8956a32f5b7c5c349e95e1b390b4f42441c17d01))
+* fix the parser path and describe the pinned node version correctly ([55f9df4](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/55f9df494111c2c5cf312a6d59bb4eb825cb3513))
+* open the release PR to the default branch automatically, use RELEASE_TOKEN ([#27](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/27)) ([b720d5a](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/b720d5ae0da09ec8dca01b3bc5cc02deb2e6de76))
+* prepare releases on develop, ship them with one merge to the default branch ([#24](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/24)) ([2c17525](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/2c17525bdb5bda40bc63ae8d2407ed2917daa566))
+
 ## [0.5.1](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.5.0...v0.5.1) (2026-09-24)
 
 
