@@ -42,7 +42,6 @@ day per host) because credentials then travel unencrypted.
 | `urgencyThresholdDays` | Highlight items whose deadline is this many days away or closer. Applies to loans and to reservations that are ready for pickup; a pending reservation has no deadline and is never highlighted. |
 | `maxConcurrentAccounts` | How many accounts may be fetched at the same time. Default `2`, so a family of cards does not hit the OPAC with simultaneous logins. |
 | `accountStaggerMs` | Delay between the start of each parallel fetch slot. Default `750`. |
-| `resultCacheTtl` | How long a fetched result is reused before the module logs in again, in milliseconds. Default `5 min`; `0` disables the cache. It only takes effect when two module instances read the same accounts; a browser reload or a second display of one instance already gets the last result from the backend without a new login. |
 
 ## Display Options
 
@@ -57,8 +56,8 @@ day per host) because credentials then travel unencrypted.
 | `showBookCovers` | Show cover images next to each title. |
 | `proxyBookCovers` | Load covers through the mirror instead of letting the browser fetch them from the library's cover supplier. Default `true`. Turning this off means the supplier sees one request per borrowed title from your IP address. |
 | `hideEmptyAccounts` | Hide accounts without loans and without errors. |
-| `logLevel` | Optional: `none`, `error`, `warn`, `info` or `debug`. All output goes through MagicMirror's `Log`, so the global `logLevel` in `config.js` decides (debug output such as session reuse and cover proxy failures needs `DEBUG` there); this option can only narrow it for this module. Unset means the global level alone. With several instances, the backend follows the most recent request. Replaces the former `debug` option. |
-| `dateLocale` | Locale used for due-date formatting. |
+| `logLevel` | Optional: `none`, `error`, `warn`, `info` or `debug`. All output goes through MagicMirror's `Log`, so the global `logLevel` in `config.js` decides (debug output such as session reuse and cover proxy failures needs `DEBUG` there); this option can only narrow it for this module. Unset means the global level alone. Applies per instance, also in the backend. Replaces the former `debug` option. |
+| `dateLocale` | Locale used for due-date formatting, e.g. `"de-DE"`. Unset (default) follows MagicMirror's `locale`, or its `language` when no locale is set. |
 | `animationSpeed` | Fade duration in milliseconds when the display redraws after new data or an error. Default `1000`. |
 
 ## Behavior Notes
@@ -78,8 +77,8 @@ day per host) because credentials then travel unencrypted.
   share one schedule. The backend sends at most `maxItems` loans and reservations
   per account plus the number of the rest.
 - A browser reload does not trigger a new fetch: the backend sends the last result
-  it has. Results with a failed account are not put into the result cache, so the
-  retry after an outage really logs in again.
+  it has. Two module instances with the same accounts each log in on their own
+  schedule; the former `resultCacheTtl` option is ignored (the backend logs a warning).
 - Sessions are reused between refreshes. A refresh costs one request while the
   OPAC session is still valid, and falls back to a full login when it is not.
 - If an OPAC host presents a missing, expired or untrusted TLS certificate, the

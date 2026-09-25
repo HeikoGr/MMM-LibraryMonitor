@@ -4,7 +4,6 @@ const assert = require("node:assert/strict");
 const { listAdapters, resolveAdapter } = require("../lib/adapters");
 const { validateSupportedLibrary } = require("../lib/library-config");
 const { runWithConcurrency } = require("../lib/opac-client");
-const { createResultCache, buildCacheKey } = require("../lib/result-cache");
 const { createCoverProxy, isProxyableUrl } = require("../lib/cover-proxy");
 const { describeCertificateProblem } = require("../lib/tls-probe");
 
@@ -79,32 +78,6 @@ test("a single account is not delayed by the stagger", async () => {
 
   assert.deepEqual(results, [1]);
   assert.ok(Date.now() - startedAt < 1000, "the first slot must start immediately");
-});
-
-test("the result cache expires and is keyed by the credentials in use", () => {
-  let now = 0;
-  const cache = createResultCache({ ttlMs: 1000, now: () => now });
-
-  cache.set("k", { totalItems: 2 });
-  assert.deepEqual(cache.get("k"), { totalItems: 2 });
-
-  now = 999;
-  assert.ok(cache.get("k"), "the entry is still fresh");
-
-  now = 1000;
-  assert.equal(cache.get("k"), null, "the entry expires at the TTL boundary");
-
-  const base = { accounts: [{ username: "u1", password: "p1" }] };
-  const changed = { accounts: [{ username: "u1", password: "p2" }] };
-  assert.equal(buildCacheKey(base), buildCacheKey({ ...base }));
-  assert.notEqual(buildCacheKey(base), buildCacheKey(changed), "a changed password must invalidate the cache");
-  assert.ok(!buildCacheKey(base).includes("p1"), "the cache key must not carry the password itself");
-});
-
-test("a zero TTL disables the result cache entirely", () => {
-  const cache = createResultCache({ ttlMs: 0 });
-  cache.set("k", { totalItems: 1 });
-  assert.equal(cache.get("k"), null);
 });
 
 test("the cover proxy only accepts URLs scraped from an OPAC page", () => {

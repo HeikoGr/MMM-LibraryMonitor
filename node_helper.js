@@ -1,9 +1,8 @@
 const NodeHelper = require("node_helper");
-const { ACCOUNT_STATUS_OK, ACCOUNT_STATUS_UNAVAILABLE, fetchAccountData } = require("./lib/opac-client");
+const { ACCOUNT_STATUS_UNAVAILABLE, fetchAccountData } = require("./lib/opac-client");
 const { createInstanceHub, formatLogEntry } = require("./lib/mmm-shared/backend-session");
 const { resolveAccountConfigs } = require("./lib/library-config");
 const { createCoverProxy } = require("./lib/cover-proxy");
-const { createResultCache } = require("./lib/result-cache");
 const shared = require("./lib/mmm-shared/mmm-shared");
 
 // MagicMirror's logger carries the global logLevel; outside MagicMirror (tests) console.
@@ -100,25 +99,13 @@ function limitItems(data, maxItems) {
   };
 }
 
-function isCompleteResult(data) {
-  return Array.isArray(data?.accounts) && data.accounts.every((account) => account?.status === ACCOUNT_STATUS_OK);
-}
-
 module.exports = NodeHelper.create({
   start() {
-    // The module's own logLevel arrives with CONFIGURE; until then only the
-    // global level applies.
-    this.logLevel = undefined;
-    this.logger = shared.createLogger({
-      moduleName: "MMM-LibraryMonitor",
-      identifier: "node_helper",
-      consoleRef: logSink,
-      getLevel: () => this.logLevel,
-      structured: true,
-      redact: true,
-      redactedKeys: REDACTED_LOG_KEYS,
-    });
-    this.resultCache = createResultCache();
+    // One logger per instance: its logLevel (from CONFIGURE) narrows the global
+    // level for that instance only. Until CONFIGURE only the global level applies.
+    this.loggers = new Map();
+    this.logLevels = new Map();
+    this.logger = this.getLogger("node_helper");
     this.coverProxy = createCoverProxy({
       expressApp: this.expressApp,
       moduleName: this.name,
@@ -139,6 +126,9 @@ module.exports = NodeHelper.create({
       prepareConfig: (config) => {
         // Throws for an unsupported or incomplete library config.
         resolveAccountConfigs(config);
+        if (config.resultCacheTtl !== undefined) {
+          this.logger.warn("resultCacheTtl is no longer used and can be removed from config.js");
+        }
         return { ...config };
       },
       lifecycleOptions: (config) => ({
@@ -149,8 +139,8 @@ module.exports = NodeHelper.create({
         quietHours: config.quietHours,
       }),
       isFailure: isTotalFailure,
-      onConfigured: (_identifier, config) => {
-        this.logLevel = config.logLevel;
+      onConfigured: (identifier, config) => {
+        this.logLevels.set(identifier, config.logLevel);
       },
       fetch: ({ identifier, config, reason }) => this.updateAccount(identifier, config, reason),
       // Tests inject a clock and timers here.
@@ -161,6 +151,24 @@ module.exports = NodeHelper.create({
 
   stop() {
     this.hub?.stop();
+  },
+
+  getLogger(identifier) {
+    if (!this.loggers.has(identifier)) {
+      this.loggers.set(
+        identifier,
+        shared.createLogger({
+          moduleName: "MMM-LibraryMonitor",
+          identifier,
+          consoleRef: logSink,
+          getLevel: () => this.logLevels.get(identifier),
+          structured: true,
+          redact: true,
+          redactedKeys: REDACTED_LOG_KEYS,
+        }),
+      );
+    }
+    return this.loggers.get(identifier);
   },
 
   /**
@@ -197,32 +205,19 @@ module.exports = NodeHelper.create({
   },
 
   async updateAccount(moduleId, config, reason) {
+    const logger = this.getLogger(moduleId);
     const startedAt = Date.now();
-    this.resultCache.setTtl(config?.resultCacheTtl);
-    const cacheKey = this.resultCache.buildCacheKey(config);
-
-    let data = this.resultCache.get(cacheKey);
-    const fromCache = data !== null;
-
-    if (!fromCache) {
-      data = await fetchAccountData(config || {}, { logger: this.logger });
-      // A result with a failed account must not be replayed: a reload right
-      // after an OPAC outage should retry instead of showing the error again.
-      if (isCompleteResult(data)) {
-        this.resultCache.set(cacheKey, data);
-      }
-    }
+    const data = await fetchAccountData(config || {}, { logger });
 
     const durationMs = Date.now() - startedAt;
     const summaries = Array.isArray(data?.accounts)
       ? data.accounts.map((account) => summarizeAccount(account)).join(" | ")
       : "no accounts";
 
-    this.logger.info("update finished", {
+    logger.info("update finished", {
       moduleId,
       reason,
       durationMs,
-      fromCache,
       totalLoans: Number(data?.totalItems) || 0,
       totalReservations: Number(data?.totalReservations) || 0,
       accounts: summaries,

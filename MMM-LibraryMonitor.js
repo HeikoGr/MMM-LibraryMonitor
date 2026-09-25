@@ -47,7 +47,7 @@ Module.register("MMM-LibraryMonitor", {
     showBookCovers: true,
     hideEmptyAccounts: false,
     logLevel: null, // optional: none | error | warn | info | debug; unset = global logLevel
-    dateLocale: "de-DE",
+    dateLocale: "", // optional, e.g. "de-DE"; unset = MagicMirror's locale, else its language
     urgencyThresholdDays: 3,
     // Serve book covers through the mirror instead of letting the browser talk
     // to the library's cover supplier, which would otherwise learn one title
@@ -57,9 +57,6 @@ Module.register("MMM-LibraryMonitor", {
     // look like a burst of parallel login attempts to the library server.
     maxConcurrentAccounts: 2,
     accountStaggerMs: 750,
-    // Reuse a recent result instead of logging in again, e.g. after a browser
-    // reload or when a second mirror client connects.
-    resultCacheTtl: 5 * 60 * 1000,
   },
 
   start() {
@@ -708,6 +705,16 @@ Module.register("MMM-LibraryMonitor", {
     });
   },
 
+  // MagicMirror's config is a global `let` in the browser, not a property of
+  // globalThis - only the bare name reaches it.
+  getDateLocale() {
+    if (this.config.dateLocale) {
+      return this.config.dateLocale;
+    }
+    const mirrorConfig = typeof config === "object" && config ? config : {};
+    return mirrorConfig.locale || mirrorConfig.language || undefined;
+  },
+
   formatDate(isoDate) {
     if (!isoDate) {
       return this.translate("UNKNOWN_DATE");
@@ -719,7 +726,7 @@ Module.register("MMM-LibraryMonitor", {
     }
 
     try {
-      return new Intl.DateTimeFormat(this.config.dateLocale, {
+      return new Intl.DateTimeFormat(this.getDateLocale(), {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",

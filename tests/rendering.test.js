@@ -388,3 +388,19 @@ test("the '+N more' lines come from the counts the backend sends", () => {
   assert.equal(more.length, 1, "no line for reservations without a rest");
   assert.ok(more[0].textContent.includes("MORE_ITEMS"));
 });
+
+test("dates follow MagicMirror's locale unless dateLocale is set", () => {
+  const module = createRenderer();
+  globalThis.config = { language: "en", locale: "en-US" };
+  try {
+    assert.equal(module.formatDate("2026-10-16"), "10/16/2026");
+
+    globalThis.config = { language: "de" };
+    assert.equal(module.formatDate("2026-10-16"), "16.10.2026", "the language when no locale is set");
+
+    module.config.dateLocale = "en-GB";
+    assert.equal(module.formatDate("2026-10-16"), "16/10/2026", "dateLocale overrides MagicMirror");
+  } finally {
+    delete globalThis.config;
+  }
+});

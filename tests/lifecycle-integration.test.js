@@ -81,9 +81,9 @@ class FakeSocket extends EventEmitter {
     return true;
   }
 
-  send(action, data) {
+  send(action, data, identifier = IDENTIFIER) {
     for (const handler of this.anyHandlers) {
-      handler(REQUEST, { identifier: IDENTIFIER, action, data });
+      handler(REQUEST, { identifier, action, data });
     }
   }
 }
@@ -172,7 +172,6 @@ function configure(socket, overrides = {}) {
       updateAnchorHour: 7,
       backgroundRefresh: true,
       maxItems: 10,
-      resultCacheTtl: 0,
       ...overrides,
     },
   });
@@ -339,5 +338,33 @@ test("the backend sends at most maxItems loans and counts the rest", async () =>
   );
   assert.equal(data.accounts[0].moreItems, 1);
   assert.equal(data.accounts[0].totalItems, 3, "totals stay the real numbers");
+  helper.stop();
+});
+
+test("each instance logs at its own logLevel", async (t) => {
+  const lines = [];
+  const originalInfo = console.info;
+  console.info = (line) => lines.push(String(line));
+  t.after(() => {
+    console.info = originalInfo;
+  });
+
+  const harness = createHarness();
+  const { helper } = startHelper(harness);
+  const socket = helper.io.connect("s1");
+  const quiet = IDENTIFIER;
+  const verbose = "module_9_MMM-LibraryMonitor";
+  configure(socket, { logLevel: "warn" });
+  socket.send(
+    "CONFIGURE",
+    { config: { libraryConfig: LIBRARY_CONFIG, username: "456", password: "secret", logLevel: "info" } },
+    verbose,
+  );
+  await settle();
+
+  const finished = (identifier) =>
+    lines.filter((line) => line.includes("update finished") && line.includes(identifier));
+  assert.equal(finished(verbose).length, 1, "the info instance logs its update");
+  assert.equal(finished(quiet).length, 0, "the warn instance stays quiet, although configured first");
   helper.stop();
 });

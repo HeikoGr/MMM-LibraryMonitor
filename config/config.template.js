@@ -56,7 +56,7 @@ const config = {
         showBookCovers: true,
         hideEmptyAccounts: false,
         // logLevel: "info", // optional; unset = MagicMirror's global logLevel
-        dateLocale: "de-DE",
+        // dateLocale: "de-DE", // optional; unset = MagicMirror's locale
         urgencyThresholdDays: 3,
         // Load book covers through the mirror instead of letting the browser
         // fetch them from the library's cover supplier.
@@ -65,8 +65,6 @@ const config = {
         // a burst of login attempts to the library server.
         maxConcurrentAccounts: 2,
         accountStaggerMs: 750,
-        // Serve a recent result instead of logging in again (0 disables).
-        resultCacheTtl: 5 * 60 * 1000,
       },
     },
   ],
