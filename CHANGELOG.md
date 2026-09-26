@@ -8,6 +8,13 @@ All notable changes to this project will be documented in this file.
 - Switched the backend HTTP client from node-fetch to the built-in fetch API.
 - Added documentation and community support files.
 
+## [0.6.1](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.6.0...v0.6.1) (2026-09-26)
+
+
+### 🔧 Tooling
+
+* skip the commit message check on the release PR ([#29](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/29)) ([73a01ff](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/73a01ff12640340bb657e226407eb92838c049c3))
+
 ## [0.6.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.5.1...v0.6.0) (2026-09-25)
 
 
