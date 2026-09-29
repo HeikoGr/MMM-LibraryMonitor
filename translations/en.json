@@ -1,5 +1,6 @@
 {
   "LOADING": "Loading library account ...",
+  "LOADING_PROGRESS": "{done} of {total} accounts loaded …",
   "NO_DATA": "No library data loaded yet.",
   "NO_ITEMS": "No borrowed or reserved items found.",
   "ACCOUNT_COUNT": "{count} accounts",

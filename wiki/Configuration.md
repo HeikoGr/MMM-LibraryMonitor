@@ -76,6 +76,10 @@ day per host) because credentials then travel unencrypted.
   only reports whether the module is visible; several displays of one instance
   share one schedule. The backend sends at most `maxItems` loans and reservations
   per account plus the number of the rest.
+- While a refresh of several accounts runs, the module shows how many accounts are loaded
+  ("3 of 6 accounts loaded …") and puts each account on screen as soon as it arrived; accounts
+  not refreshed yet keep what they showed. The list can therefore change a few times within
+  seconds.
 - A browser reload does not trigger a new fetch: the backend sends the last result
   it has. Two module instances with the same accounts each log in on their own
   schedule; the former `resultCacheTtl` option is ignored (the backend logs a warning).

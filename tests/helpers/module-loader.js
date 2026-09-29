@@ -52,14 +52,17 @@ function createRenderer(configOverrides = {}) {
       markFetchFailed() {
         this.fetchFailures += 1;
       },
-      render() {
+      render(speed) {
         this.renders += 1;
+        this.lastSpeed = speed;
       },
     },
     loaded: true,
     error: null,
     accountData: null,
     lastSuccessfulData: null,
+    progress: null,
+    accountOrder: new Map(),
     translate: (key) => key,
   };
 }

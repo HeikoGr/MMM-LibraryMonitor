@@ -127,7 +127,7 @@ module.exports = NodeHelper.create({
       onConfigured: (identifier, config) => {
         this.logLevels.set(identifier, config.logLevel);
       },
-      fetch: ({ identifier, config, reason }) => this.updateAccount(identifier, config, reason),
+      fetch: ({ identifier, config, reason }) => this.fetchAccounts(identifier, config, reason),
       // Tests inject a clock and timers here.
       ...this.hubOptions,
     });
@@ -189,10 +189,29 @@ module.exports = NodeHelper.create({
     this.hub.socketNotificationReceived(notification, payload);
   },
 
-  async updateAccount(moduleId, config, reason) {
-    const logger = this.getLogger(moduleId);
+  /**
+   * Report the loading state to the displays of an instance: PROGRESS carries
+   * { done, total } and, once an account finished, that account (already
+   * prepared like in DATA) with its place in the config.
+   */
+  sendProgress(identifier, data) {
+    this.sendSocketNotification(
+      this.hub.notifications.EVENT,
+      shared.createEnvelope({ identifier, action: "PROGRESS", ok: true, data }),
+    );
+  },
+
+  async fetchAccounts(identifier, config, reason) {
+    const logger = this.getLogger(identifier);
     const startedAt = Date.now();
-    const data = await fetchAccountData(config || {}, { logger });
+    const prepare = (data) => limitItems(this.applyCoverProxy(data, config), config.maxItems);
+    const total = resolveAccountConfigs(config || {}).length;
+    this.sendProgress(identifier, { done: 0, total });
+    const data = await fetchAccountData(config || {}, {
+      logger,
+      onAccount: ({ account, index, done }) =>
+        this.sendProgress(identifier, { done, total, index, account: prepare({ accounts: [account] }).accounts[0] }),
+    });
 
     const durationMs = Date.now() - startedAt;
     const summaries = Array.isArray(data?.accounts)
@@ -200,7 +219,7 @@ module.exports = NodeHelper.create({
       : "no accounts";
 
     logger.info("update finished", {
-      moduleId,
+      identifier,
       reason,
       durationMs,
       totalLoans: Number(data?.totalItems) || 0,
@@ -208,6 +227,6 @@ module.exports = NodeHelper.create({
       accounts: summaries,
     });
 
-    return limitItems(this.applyCoverProxy(data, config), config.maxItems);
+    return prepare(data);
   },
 });

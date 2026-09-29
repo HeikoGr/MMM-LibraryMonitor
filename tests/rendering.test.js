@@ -432,3 +432,101 @@ test("fresh items are stamped with the day they arrived", () => {
 
   assert.equal(renderer.accountData.accounts[0].items[0].receivedDay, renderer.todayUtc());
 });
+
+/** Push a loading state the way the backend does (PROGRESS event). */
+function progress(module, data) {
+  module.socketNotificationReceived(module.notifications.EVENT, {
+    identifier: module.identifier,
+    action: "PROGRESS",
+    data,
+  });
+}
+
+test("the first load shows the loading state and every account as soon as it arrived", () => {
+  const first = account({ id: "a1", label: "child 1", items: [loan({ title: "Erstes Buch" })], totalItems: 1 });
+  const third = account({
+    id: "a3",
+    label: "child 3",
+    items: [loan({ id: "l3", title: "Drittes Buch" })],
+    totalItems: 1,
+  });
+
+  withDocument(() => {
+    const module = createRenderer();
+    module.loaded = false;
+
+    progress(module, { done: 0, total: 3 });
+    assert.equal(module.getDom().textContent, "LOADING_PROGRESS", "nothing loaded yet: only the loading state");
+
+    // The third account finishes first; it must still end up after the first one.
+    progress(module, { done: 1, total: 3, index: 2, account: third });
+    progress(module, { done: 2, total: 3, index: 0, account: first });
+    const dom = module.getDom();
+    assert.ok(find(dom, "mmm-library-monitor__progress"), "the loading state stays visible");
+    assert.deepEqual(
+      module.accountData.accounts.map((entry) => entry.id),
+      ["a1", "a3"],
+    );
+    assert.ok(dom.textContent.includes("Erstes Buch") && dom.textContent.includes("Drittes Buch"));
+    assert.equal(module.accountData.totalItems, 2);
+    assert.equal(module.lifecycle.lastSpeed, 0, "loading updates redraw without the fade");
+
+    respond(module, payload([first, account({ id: "a2", label: "child 2" }), third]));
+    assert.equal(find(module.getDom(), "mmm-library-monitor__progress"), null, "DATA ends the loading state");
+    assert.equal(module.progress, null);
+  });
+});
+
+test("a refresh replaces each account when it arrives and keeps the others until then", () => {
+  const old1 = account({ id: "a1", label: "child 1", items: [loan({ title: "Altes Buch 1" })], totalItems: 1 });
+  const old2 = account({
+    id: "a2",
+    label: "child 2",
+    items: [loan({ id: "l2", title: "Altes Buch 2" })],
+    totalItems: 1,
+  });
+
+  const { module, dom } = render((module) => {
+    respond(module, payload([old1, old2]));
+    progress(module, { done: 0, total: 2 });
+    progress(module, {
+      done: 1,
+      total: 2,
+      index: 1,
+      account: account({
+        id: "a2",
+        label: "child 2",
+        items: [loan({ id: "l9", title: "Neues Buch 2" })],
+        totalItems: 1,
+      }),
+    });
+  });
+
+  assert.ok(dom.textContent.includes("Altes Buch 1"), "a1 is not refreshed yet");
+  assert.ok(dom.textContent.includes("Neues Buch 2"), "a2 shows its new loans right away");
+  assert.ok(!dom.textContent.includes("Altes Buch 2"));
+  assert.deepEqual(
+    module.accountData.accounts.map((entry) => entry.id),
+    ["a1", "a2"],
+  );
+});
+
+test("an account that could not be reached during a refresh keeps its previous state", () => {
+  const old = account({ id: "a1", label: "child 1", items: [loan()], totalItems: 1 });
+
+  const { dom } = render((module) => {
+    respond(module, payload([old, account({ id: "a2", label: "child 2" })]));
+    progress(module, { done: 1, total: 2, index: 0, account: unavailable({ id: "a1", label: "child 1" }) });
+  });
+
+  assert.ok(dom.textContent.includes("Geheimnis auf dem Ponyhof"));
+  assert.ok(find(dom, "mmm-library-monitor__stale"));
+  assert.equal(find(dom, "mmm-library-monitor__account-error"), null);
+});
+
+test("a single account shows no loading counter", () => {
+  const { module } = render((module) => {
+    progress(module, { done: 0, total: 1 });
+  });
+  assert.equal(module.progress, null);
+});

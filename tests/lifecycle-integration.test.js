@@ -111,21 +111,18 @@ function startHelper(harness, outcome = () => "ok") {
   const opacStub = {
     ACCOUNT_STATUS_OK: "ok",
     ACCOUNT_STATUS_UNAVAILABLE: "unavailable",
-    fetchAccountData: async () => {
+    fetchAccountData: async (_config, options = {}) => {
       fetches.push(harness.now());
       const status = outcome(fetches.length);
-      return {
-        accounts: [
-          {
-            id: "account-1",
-            status,
-            error: status === "ok" ? null : "OPAC unreachable",
-            items: [{ title: "A" }, { title: "B" }, { title: "C" }],
-            totalItems: 3,
-          },
-        ],
-        totalItems: 0,
+      const account = {
+        id: "account-1",
+        status,
+        error: status === "ok" ? null : "OPAC unreachable",
+        items: [{ title: "A" }, { title: "B" }, { title: "C" }],
+        totalItems: 3,
       };
+      options.onAccount?.({ account, index: 0, done: 1, total: 1 });
+      return { accounts: [account], totalItems: 0 };
     },
   };
 
@@ -368,5 +365,30 @@ test("each instance logs at its own logLevel", async (t) => {
     lines.filter((line) => line.includes("update finished") && line.includes(identifier));
   assert.equal(finished(verbose).length, 1, "the info instance logs its update");
   assert.equal(finished(quiet).length, 0, "the warn instance stays quiet, although configured first");
+  helper.stop();
+});
+
+test("the displays see the loading state and each account before the final DATA", async () => {
+  const harness = createHarness();
+  const { helper } = startHelper(harness);
+  const socket = helper.io.connect("s1");
+  configure(socket, { maxItems: 2 });
+  await settle();
+
+  const events = helper.pushed.filter((payload) => ["PROGRESS", "DATA"].includes(payload.action));
+  assert.deepEqual(
+    events.map((payload) => [payload.action, payload.data?.done ?? null]),
+    [
+      ["PROGRESS", 0],
+      ["PROGRESS", 1],
+      ["DATA", null],
+    ],
+  );
+  const [start, finished] = events;
+  assert.equal(start.identifier, IDENTIFIER);
+  assert.equal(start.data.total, 1);
+  assert.equal(finished.data.index, 0);
+  assert.equal(finished.data.account.items.length, 2, "an account in PROGRESS is limited like in DATA");
+  assert.equal(finished.data.account.moreItems, 1);
   helper.stop();
 });

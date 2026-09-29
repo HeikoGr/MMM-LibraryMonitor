@@ -46,6 +46,7 @@
   overflow-wrap: anywhere;
 }
 
+.mmm-library-monitor__progress,
 .mmm-library-monitor__summary,
 .mmm-library-monitor__warning,
 .mmm-library-monitor__stale,
