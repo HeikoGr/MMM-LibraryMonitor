@@ -40,7 +40,7 @@ Module.register("MMM-LibraryMonitor", {
     // Keep simultaneous OPAC logins low: a family with several cards should not
     // look like a burst of parallel login attempts to the library server.
     maxConcurrentAccounts: 2,
-    accountStaggerMs: 750,
+    accountStaggerMs: 250,
   },
 
   start() {
