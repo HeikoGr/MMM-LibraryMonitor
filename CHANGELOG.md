@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.6.0...v0.7.0) (2026-09-29)
+
+
+### 🔌 Features
+
+* show the loading state and each account as soon as it arrived ([f3794a8](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/f3794a8b9cc9b7544bc8633e4baecbeab3bee9c0))
+
+
+### ⚡ Performance
+
+* load cheerio on first use ([f3794a8](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/f3794a8b9cc9b7544bc8633e4baecbeab3bee9c0))
+* log in without loading the login page first ([f3794a8](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/f3794a8b9cc9b7544bc8633e4baecbeab3bee9c0))
+* start the second account 250 ms after the first instead of 750 ms ([f3794a8](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/f3794a8b9cc9b7544bc8633e4baecbeab3bee9c0))
+
+
+### 🧱 Refactoring
+
+* describe the current behavior in comments ([f3794a8](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/f3794a8b9cc9b7544bc8633e4baecbeab3bee9c0))
+* name the instance identifier the same everywhere ([f3794a8](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/f3794a8b9cc9b7544bc8633e4baecbeab3bee9c0))
+
+
+### 🧪 Testing
+
+* wait for the socket close in the cover proxy test instead of sleeping ([#37](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/37)) ([a1d6b59](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/a1d6b5957aa827139abed65685f6a5bd5a99a455))
+
+
+### 📦 Build & Dependencies
+
+* **deps:** bump mmm-shared to 0.4.0 ([8d49ca6](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/8d49ca670cdeac4dea0666a81964a4502c021d33))
+* **deps:** replace commitlint with a built-in commit message check ([#33](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/33)) ([b67d16d](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/b67d16d3ee85538f9b4b02a777554e7284d54902))
+
+
+### 🔧 Tooling
+
+* keep ci-only commits out of releases and the changelog ([#31](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/31)) ([10e53bf](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/10e53bf6838be64f80df8962f72ff2dc5d8f9807))
+* skip the commit message check on the release PR ([#29](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/29)) ([73a01ff](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/73a01ff12640340bb657e226407eb92838c049c3))
+* treat the mmm-shared submodule pointer as a dependency in the commit scope check ([8d49ca6](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/8d49ca670cdeac4dea0666a81964a4502c021d33))
+
+
+### 🔧 Maintenance
+
+* **deps-dev:** bump lint-staged from 17.5.1 to 17.6.0 ([#35](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/35)) ([802c294](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/802c294a335b95d0035b86944344fcb3b149beb2))
+* drop the stale Unreleased section from the changelog ([#32](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/32)) ([ac95704](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/ac95704c404afff6b37ea344b3c9f99a0783d85a))
+* list ci and chore commits in the changelog ([f3794a8](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/f3794a8b9cc9b7544bc8633e4baecbeab3bee9c0))
+* restart instead of stop in the pm2 clean task, warn about PID 1 ([#36](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/36)) ([ef7c77b](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/ef7c77bf3a034b752c17333c1b3ca5720e4c93d0))
+
 ## [0.6.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.5.1...v0.6.0) (2026-09-25)
 
 
