@@ -40,7 +40,7 @@ Module.register("MMM-LibraryMonitor", {
     // Keep simultaneous OPAC logins low: a family with several cards should not
     // look like a burst of parallel login attempts to the library server.
     maxConcurrentAccounts: 2,
-    accountStaggerMs: 750,
+    accountStaggerMs: 250,
   },
 
   start() {
@@ -48,7 +48,6 @@ Module.register("MMM-LibraryMonitor", {
     this.transport = this.shared.createTransport({
       moduleName: "MMM-LibraryMonitor",
       identifier: this.identifier,
-      instanceId: this.identifier,
       sendSocketNotification: this.sendSocketNotification.bind(this),
     });
     this.notifications = this.transport.notifications;
@@ -67,6 +66,10 @@ Module.register("MMM-LibraryMonitor", {
     this.error = null;
     this.accountData = null;
     this.lastSuccessfulData = null;
+    // { done, total } while a refresh of several accounts runs, else null.
+    this.progress = null;
+    // Account id -> its place in the config, so accounts that finish early keep their order.
+    this.accountOrder = new Map();
 
     // The config goes to the backend once; it owns the refresh schedule
     // (node_helper + lib/mmm-shared/backend-session.js) and pushes the accounts.
@@ -140,7 +143,13 @@ Module.register("MMM-LibraryMonitor", {
       return;
     }
 
+    if (payload.action === "PROGRESS") {
+      this.handleProgress(payload.data);
+      return;
+    }
+
     if (payload.action === "DATA") {
+      this.progress = null;
       this.handleAccountsResponse(payload.data);
       return;
     }
@@ -151,6 +160,7 @@ Module.register("MMM-LibraryMonitor", {
       payload.action === "CONFIG_REJECTED"
     ) {
       this.loaded = true;
+      this.progress = null;
       this.error =
         payload.action === "CONFIG_REJECTED"
           ? `Config differs from the running instance: ${(payload.data?.mismatchKeys || []).join(", ")}`
@@ -198,12 +208,84 @@ Module.register("MMM-LibraryMonitor", {
       }
     }
 
+    for (const [index, account] of accounts.entries()) {
+      this.accountOrder.set(account.id, index);
+    }
     const merged = this.mergeWithPrevious(data, this.lastSuccessfulData);
     this.error = null;
     this.accountData = merged;
     this.lastSuccessfulData = merged;
     this.lifecycle.markDataReceived();
     this.lifecycle.render(this.config.animationSpeed);
+  },
+
+  /**
+   * A refresh is running: show how far it got and put every finished account on
+   * screen right away. Accounts that are not done yet keep what they showed; an
+   * account that could not be reached keeps its previous state, as in DATA.
+   * The final DATA replaces all of it.
+   * @param {object} data - { done, total, index?, account? }
+   */
+  handleProgress(data) {
+    const done = Number(data?.done) || 0;
+    const total = Number(data?.total) || 0;
+    this.progress = total > 1 && done < total ? { done, total } : null;
+
+    if (data?.account) {
+      this.applyAccountUpdate(data.account, Number(data.index));
+    }
+
+    // Several updates within seconds: redraw without the fade.
+    this.lifecycle.render(0);
+  },
+
+  applyAccountUpdate(account, index) {
+    if (Number.isFinite(index)) {
+      this.accountOrder.set(account.id, index);
+    }
+
+    const accounts = Array.isArray(this.accountData?.accounts) ? [...this.accountData.accounts] : [];
+    const position = accounts.findIndex((entry) => entry.id === account.id);
+    const shown = position >= 0 ? accounts[position] : null;
+
+    let next = account;
+    if (this.isAccountUnavailable(account)) {
+      if (shown && !this.isAccountUnavailable(shown)) {
+        next = { ...shown, staleError: account.error };
+      }
+    } else {
+      const receivedDay = this.todayUtc();
+      for (const item of [...(account.items || []), ...(account.reservations || [])]) {
+        item.receivedDay = receivedDay;
+      }
+    }
+
+    if (position >= 0) {
+      accounts[position] = next;
+    } else {
+      const orderOf = (entry) => this.accountOrder.get(entry.id) ?? Number.MAX_SAFE_INTEGER;
+      const before = accounts.findIndex((entry) => orderOf(entry) > orderOf(next));
+      accounts.splice(before < 0 ? accounts.length : before, 0, next);
+    }
+
+    this.loaded = true;
+    this.accountData = this.withTotals({ ...(this.accountData || {}) }, accounts);
+  },
+
+  /**
+   * @param {object} base - Payload the totals belong to
+   * @param {object[]} accounts - Accounts to count
+   * @returns {object} base with accounts and recomputed totals
+   */
+  withTotals(base, accounts) {
+    const sum = (key) => accounts.reduce((total, account) => total + (Number(account[key]) || 0), 0);
+    return {
+      ...base,
+      accounts,
+      totalAccounts: accounts.length,
+      totalItems: sum("totalItems"),
+      totalReservations: sum("totalReservations"),
+    };
   },
 
   isAccountUnavailable(account) {
@@ -234,15 +316,7 @@ Module.register("MMM-LibraryMonitor", {
       return kept ? { ...kept, staleError: account.error } : account;
     });
 
-    const sum = (key) => accounts.reduce((total, account) => total + (Number(account[key]) || 0), 0);
-
-    return {
-      ...data,
-      accounts,
-      totalAccounts: accounts.length,
-      totalItems: sum("totalItems"),
-      totalReservations: sum("totalReservations"),
-    };
+    return this.withTotals(data, accounts);
   },
 
   resolveErrorMessage(payload) {
@@ -271,7 +345,9 @@ Module.register("MMM-LibraryMonitor", {
 
     if (!this.loaded) {
       wrapper.classList.add("dimmed", "light", "small");
-      wrapper.textContent = this.translate("LOADING");
+      wrapper.textContent = this.progress
+        ? this.translate("LOADING_PROGRESS", this.progress)
+        : this.translate("LOADING");
       return wrapper;
     }
 
@@ -295,6 +371,13 @@ Module.register("MMM-LibraryMonitor", {
 
     if (this.error) {
       wrapper.appendChild(this.createStaleNotice(this.error));
+    }
+
+    if (this.progress) {
+      const progress = document.createElement("div");
+      progress.className = "mmm-library-monitor__progress xsmall dimmed light";
+      progress.textContent = this.translate("LOADING_PROGRESS", this.progress);
+      wrapper.appendChild(progress);
     }
 
     const summary = document.createElement("div");

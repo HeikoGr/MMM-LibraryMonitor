@@ -4,6 +4,7 @@
 
 - Only change code and files inside this repository.
 - Keep changes minimal and directly related to the request/issue.
+- In the devcontainer `pm2-runtime` is PID 1: never `pm2 stop`, `pm2 delete` or `pm2 kill` (that ends the whole container); use `pm2 restart magicmirror`. The mirror does not restart on file changes (`watch: false`).
 - Do not introduce new dependencies unless explicitly required; if you do, update `package.json` (and existing lockfiles).
 - Never commit secrets (tokens, API keys, session cookies, personal data). Library card
   numbers and passwords count as secrets; they must never reach a log (`REDACTED_LOG_KEYS` in
@@ -24,7 +25,10 @@
   `SESSION_STATE` (active/paused). `lib/mmm-shared/backend-session.js` runs a `createLifecycle` per
   instance in `node_helper` (6 h grid anchored at `updateAnchorHour`, jitter, `quietHours`),
   retries a refresh in which every account failed with a growing backoff, and pushes the
-  result as a `DATA` event. The frontend lifecycle has no `onFetch`; it only gates rendering
+  result as a `DATA` event. While a refresh runs, `node_helper.fetchAccounts` sends `PROGRESS`
+  events itself (`{ done, total }` at the start, then `{ done, total, index, account }` per
+  finished account, prepared like `DATA`); the frontend shows "n of m accounts loaded" and puts
+  each account on screen right away. `DATA` stays the final result. The frontend lifecycle has no `onFetch`; it only gates rendering
   (`lifecycle.render()`). Do not add own timers or suspend/resume logic.
 - `backend-session.js` comes from the `lib/mmm-shared` submodule (tests there); change it in the
   mmm-shared repo.

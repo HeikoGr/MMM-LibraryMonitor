@@ -2,11 +2,10 @@
 /**
  * Guard against commit types that understate what the commit actually changes.
  *
- * Why this exists: commitlint only validates the *format* of a commit message, not whether the
+ * Why this exists: check-commit-msg.js only validates the *format* of a commit message, not whether the
  * chosen type matches what the diff actually does. A commit typed `chore` but containing a real
- * behavior fix in runtime source still passes commitlint - and because the type is low-signal,
- * release-please leaves it out of the changelog, so the fix silently disappears from the release
- * notes.
+ * behavior fix in runtime source still passes the format check - and because the type is low-signal,
+ * release-please files it under Maintenance instead of Fixes, and the version bump misses it.
  *
  * So: if a low-signal commit type touches runtime source, ask for a better type.
  *
@@ -28,8 +27,9 @@ const RUNTIME_PATHS = [
   /^MMM-LibraryMonitor\.css$/,
 ];
 
-// Carve-outs inside those trees that are not runtime behavior.
-const RUNTIME_EXCEPTIONS = [/^lib\/mmm-shared\//, /\.md$/];
+// Carve-outs inside those trees that are not runtime behavior. The submodule shows up in the
+// staged list as the bare `lib/mmm-shared`, without a trailing slash.
+const RUNTIME_EXCEPTIONS = [/^lib\/mmm-shared(\/|$)/, /\.md$/];
 
 function isRuntimePath(file) {
   if (RUNTIME_EXCEPTIONS.some((pattern) => pattern.test(file))) return false;
@@ -91,7 +91,7 @@ function main() {
 
   const subject = fs.readFileSync(messageFile, "utf8").split("\n")[0].trim();
   const match = subject.match(/^([a-z]+)(\([^)]*\))?(!)?:/);
-  if (!match) return; // commitlint reports malformed subjects; not this guard's job.
+  if (!match) return; // check-commit-msg.js reports malformed subjects; not this guard's job.
 
   const [, type, , breaking] = match;
   if (breaking || !LOW_SIGNAL_TYPES.has(type)) return;
