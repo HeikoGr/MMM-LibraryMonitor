@@ -125,7 +125,12 @@ test("a failed cover request releases its connection instead of leaving the body
   try {
     const res = await app.request(proxy.register(`http://127.0.0.1:${server.address().port}/missing.png`));
     assert.equal(res.statusCode, 502);
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // The server sees the close a moment after the response; how long that takes depends on the machine,
+    // so wait for the event (up to 5 s) instead of sleeping a fixed time.
+    const deadline = Date.now() + 5000;
+    while (!socketClosed && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
     assert.ok(socketClosed, "the unread error body must not keep the connection busy");
   } finally {
     server.closeAllConnections();
