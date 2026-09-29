@@ -48,7 +48,6 @@ Module.register("MMM-LibraryMonitor", {
     this.transport = this.shared.createTransport({
       moduleName: "MMM-LibraryMonitor",
       identifier: this.identifier,
-      instanceId: this.identifier,
       sendSocketNotification: this.sendSocketNotification.bind(this),
     });
     this.notifications = this.transport.notifications;

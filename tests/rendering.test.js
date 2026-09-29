@@ -35,7 +35,7 @@ function reservation(overrides = {}) {
     reservationDate: "2026-09-11",
     reservationDateText: "11.09.2026",
     // A pending reservation carries the date it was *placed*, so the delta is
-    // always negative. This is exactly the shape that used to be misread.
+    // always negative; it must not be read as an overdue loan.
     daysRemaining: -10,
     isOverdue: true,
     ...overrides,

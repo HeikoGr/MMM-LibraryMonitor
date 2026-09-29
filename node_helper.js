@@ -60,7 +60,7 @@ function isTotalFailure(data) {
 }
 
 /**
- * Send at most maxItems loans and reservations per account (MODULE-PLAN C2);
+ * Send at most maxItems loans and reservations per account;
  * the frontend only needs the number of the rest for its "+N more" line.
  */
 function limitItems(data, maxItems) {
