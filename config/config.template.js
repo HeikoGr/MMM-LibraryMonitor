@@ -64,7 +64,7 @@ const config = {
         // Keep parallel OPAC logins low so a family of cards does not look like
         // a burst of login attempts to the library server.
         maxConcurrentAccounts: 2,
-        accountStaggerMs: 750,
+        accountStaggerMs: 250,
       },
     },
   ],

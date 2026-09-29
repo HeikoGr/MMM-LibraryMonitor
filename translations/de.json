@@ -1,5 +1,6 @@
 {
   "LOADING": "Bibliothekskonto wird geladen ...",
+  "LOADING_PROGRESS": "{done} von {total} Konten geladen …",
   "NO_DATA": "Noch keine Bibliotheksdaten vorhanden.",
   "NO_ITEMS": "Derzeit sind keine ausgeliehenen oder reservierten Medien vorhanden.",
   "ACCOUNT_COUNT": "{count} Konten",
