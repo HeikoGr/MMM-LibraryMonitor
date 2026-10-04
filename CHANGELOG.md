@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.0...v0.7.1) (2026-10-04)
+
+
+### 📦 Build & Dependencies
+
+* **deps:** update Biome and group weekly dependency updates ([9309030](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/9309030b61ae1883828ea21a3775081b51be5296))
+
 ## [0.7.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.6.0...v0.7.0) (2026-09-29)
 
 
