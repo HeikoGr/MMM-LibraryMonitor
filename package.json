@@ -1,6 +1,6 @@
 {
   "name": "mmm-librarymonitor",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": true,
   "description": "MagicMirror module to display borrowed media and due dates from library OPAC accounts.",
   "keywords": [

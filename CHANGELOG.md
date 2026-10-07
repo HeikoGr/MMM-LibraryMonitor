@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.2](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.1...v0.7.2) (2026-10-07)
+
+
+### 🔧 Tooling
+
+* ship releases via auto-merged release-ship PR and drop commit hooks ([#44](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/44)) ([b1221d4](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/b1221d4e0a7c84e85b927399a03559cb37cfb7d6))
+
 ## [0.7.1](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.0...v0.7.1) (2026-10-04)
 
 
