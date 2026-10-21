@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.3](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.2...v0.7.3) (2026-10-21)
+
+
+### 📦 Build & Dependencies
+
+* **deps:** update dependencies and Biome to 2.6 ([b1de4c2](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/b1de4c2c7f2303861b9a4a63712aacd93d0c1448))
+
+
+### 🔧 Maintenance
+
+* **deps:** bump undici from 8.11.2 to 8.12.2 in the npm group ([#47](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/47)) ([8fc4eef](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/8fc4eefec60a02dd2ce890a561c46c3b7f562816))
+
 ## [0.7.2](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.1...v0.7.2) (2026-10-07)
 
 
