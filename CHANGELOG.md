@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.4](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.3...v0.7.4) (2026-10-28)
+
+
+### 📦 Build & Dependencies
+
+* **deps:** read the Biome schema from node_modules and update mmm-shared ([#52](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/52)) ([add6259](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/add6259e6ff741b53e3e47a1dece808e9a009abe))
+
+
+### 🔧 Maintenance
+
+* **deps-dev:** bump @biomejs/biome from 2.6.2 to 2.6.3 in the npm group ([#51](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/51)) ([3101e38](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/3101e38fc053f7cc2c46d7da869270bc5f3c468b))
+
 ## [0.7.3](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.2...v0.7.3) (2026-10-21)
 
 
