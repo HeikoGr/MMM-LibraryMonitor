@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.5](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.4...v0.7.5) (2026-11-05)
+
+
+### 📦 Build & Dependencies
+
+* **deps:** bump undici and Biome, move the devcontainer to the trixie-slim image ([#56](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/56)) ([d0b189a](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/d0b189a9fc7e3eba1f2fb9907ec3fc2a27583b27))
+
+
+### 🔧 Maintenance
+
+* **deps-dev:** bump @biomejs/biome from 2.6.3 to 2.6.4 in the npm group ([#55](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/55)) ([be4ab59](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/be4ab59b9026ba66f10a77d2b772ba86e3c910e1))
+
 ## [0.7.4](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.3...v0.7.4) (2026-10-28)
 
 
