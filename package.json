@@ -40,10 +40,10 @@
   "dependencies": {
     "cheerio": "^1.2.0",
     "fetch-cookie": "^3.2.0",
-    "tough-cookie": "^6.0.2",
+    "tough-cookie": "^6.1.0",
     "undici": "^8.12.4"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.5"
+    "@biomejs/biome": "^2.6.6"
   }
 }
