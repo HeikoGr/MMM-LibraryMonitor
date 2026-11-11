@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.7](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.6...v0.7.7) (2026-11-11)
+
+
+### 🔧 Tooling
+
+* only accept release PRs on the default branch ([#63](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/63)) ([5bf3fd0](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/5bf3fd0c706ad8b22d0136059fae5b5eb6f0981b))
+
 ## [0.7.6](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.5...v0.7.6) (2026-11-11)
 
 
