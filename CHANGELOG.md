@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.6](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.5...v0.7.6) (2026-11-11)
+
+
+### 🔧 Tooling
+
+* keep the write token away from Dependabot code and test Node 22 and 24 ([#60](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/60)) ([4ad01d5](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/4ad01d579668e86d6d2d816f2aa5034785ec5b47))
+
+
+### 🔧 Maintenance
+
+* **deps:** bump the npm group with 2 updates ([#59](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/59)) ([26bc41b](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/26bc41b36c9f8c01af4461a14dc69f63977c401b))
+
 ## [0.7.5](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.4...v0.7.5) (2026-11-05)
 
 
