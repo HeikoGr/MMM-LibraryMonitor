@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.8](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.7...v0.7.8) (2026-11-12)
+
+
+### 🐛 Fixes
+
+* **cover-proxy:** bound the cache in bytes, keep recent covers, follow one redirect ([#67](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/67)) ([751e490](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/751e490f7b67d0ee7e95c6a4d46681ef2abf2339))
+
 ## [0.7.7](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.6...v0.7.7) (2026-11-11)
 
 
