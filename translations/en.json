@@ -7,7 +7,6 @@
   "VISIBLE_ACCOUNT_COUNT": "{visibleCount} of {totalCount} accounts",
   "ACCOUNT_ERRORS": "{count} errors",
   "ACCOUNT_LABEL_FALLBACK": "Account {count}",
-  "ACCOUNT_META": "Account: {label}",
   "ITEM_COUNT": "{count} loans",
   "RESERVATION_COUNT": "{count} reservations",
   "RESERVATIONS_SECTION": "Reservations",
