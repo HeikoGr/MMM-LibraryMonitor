@@ -45,8 +45,9 @@
   `customssl: true` disables verification (discouraged; `lib/tls-trust.js`). The certificate
   probe in `lib/tls-probe.js` is diagnostic only and runs once per host and day (the cadence is
   `shouldProbe()` in `lib/opac-client.js`; the probe itself does not cache).
-- Book covers go through `lib/cover-proxy.js` (only URLs seen in a scraped page, image
-  content types, size limit), so the cover supplier does not see the household's loans.
+- Book covers go through `lib/cover-proxy.js` (only URLs seen in a scraped page, at most one
+  redirect and only to http(s), image content types, 3 MB per cover, 32 MB for the whole
+  in-memory cache), so the cover supplier does not see the household's loans.
 - The DOM is built with `createElement`/`textContent`; scraped values never go through
   `innerHTML`.
 
