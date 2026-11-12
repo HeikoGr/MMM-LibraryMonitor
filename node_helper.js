@@ -204,7 +204,8 @@ module.exports = NodeHelper.create({
   async fetchAccounts(identifier, config, reason) {
     const logger = this.getLogger(identifier);
     const startedAt = Date.now();
-    const prepare = (data) => limitItems(this.applyCoverProxy(data, config), config.maxItems);
+    // Cut to maxItems first: only covers that reach the display are registered with the proxy.
+    const prepare = (data) => this.applyCoverProxy(limitItems(data, config.maxItems), config);
     const total = resolveAccountConfigs(config || {}).length;
     this.sendProgress(identifier, { done: 0, total });
     const data = await fetchAccountData(config || {}, {
