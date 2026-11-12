@@ -118,7 +118,7 @@ function startHelper(harness, outcome = () => "ok") {
         id: "account-1",
         status,
         error: status === "ok" ? null : "OPAC unreachable",
-        items: [{ title: "A" }, { title: "B" }, { title: "C" }],
+        items: ["A", "B", "C"].map((title) => ({ title, coverImageUrl: `https://covers.example/${title}.jpg` })),
         totalItems: 3,
       };
       options.onAccount?.({ account, index: 0, done: 1, total: 1 });
@@ -337,6 +337,20 @@ test("the backend sends at most maxItems loans and counts the rest", async () =>
   );
   assert.equal(data.accounts[0].moreItems, 1);
   assert.equal(data.accounts[0].totalItems, 3, "totals stay the real numbers");
+  helper.stop();
+});
+
+test("only covers of loans that reach the display are registered with the proxy", async () => {
+  const harness = createHarness();
+  const { helper } = startHelper(harness);
+  const socket = helper.io.connect("s1");
+  configure(socket, { maxItems: 1 });
+  await settle();
+
+  const data = helper.pushed.find((payload) => payload.action === "DATA").data;
+  assert.equal(data.accounts[0].items.length, 1);
+  assert.match(data.accounts[0].items[0].coverImageUrl, /^\/MMM-LibraryMonitor\/cover\//);
+  assert.equal(helper.coverProxy.size, 1, "covers cut by maxItems stay unknown to the proxy");
   helper.stop();
 });
 

@@ -1,10 +1,10 @@
-const config = require("../config/config.js");
+const config = require("../config/.config.js");
 const { fetchAccountData } = require("../lib/opac-client");
 
 function resolveModuleConfig() {
   const moduleEntry = config.modules.find((entry) => entry.module === "MMM-LibraryMonitor");
   if (!moduleEntry?.config) {
-    throw new Error("MMM-LibraryMonitor module configuration not found in config/config.js.");
+    throw new Error("MMM-LibraryMonitor module configuration not found in config/.config.js.");
   }
 
   return {
