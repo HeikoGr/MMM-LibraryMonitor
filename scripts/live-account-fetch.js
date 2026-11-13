@@ -35,7 +35,7 @@ async function main() {
                 coverImageUrl: item.coverImageUrl || null,
                 dueDate: item.dueDate,
                 branch: item.branch,
-                isOverdue: item.isOverdue,
+                daysRemaining: item.daysRemaining,
               }))
             : [],
           reservations: Array.isArray(account.reservations)

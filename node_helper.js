@@ -206,11 +206,13 @@ module.exports = NodeHelper.create({
     const startedAt = Date.now();
     // Cut to maxItems first: only covers that reach the display are registered with the proxy.
     const prepare = (data) => this.applyCoverProxy(limitItems(data, config.maxItems), config);
-    const total = resolveAccountConfigs(config || {}).length;
-    this.sendProgress(identifier, { done: 0, total });
-    const data = await fetchAccountData(config || {}, {
+    // Once per fetch: a libraryConfigFile is read here, so an edit takes effect on the next fetch.
+    const accountConfigs = resolveAccountConfigs(config);
+    this.sendProgress(identifier, { done: 0, total: accountConfigs.length });
+    const data = await fetchAccountData(config, {
+      accountConfigs,
       logger,
-      onAccount: ({ account, index, done }) =>
+      onAccount: ({ account, index, done, total }) =>
         this.sendProgress(identifier, { done, total, index, account: prepare({ accounts: [account] }).accounts[0] }),
     });
 

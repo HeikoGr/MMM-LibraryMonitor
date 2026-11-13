@@ -54,7 +54,7 @@ day per host) because credentials then travel unencrypted.
 | `showValidUntil` | Show card validity. |
 | `showNotices` | Show account notices from the OPAC page. |
 | `showBookCovers` | Show cover images next to each title. |
-| `proxyBookCovers` | Load covers through the mirror instead of letting the browser fetch them from the library's cover supplier. Default `true`. Turning this off means the supplier sees one request per borrowed title from your IP address. The proxy follows at most one redirect, and only to `http`/`https`. |
+| `proxyBookCovers` | Load covers through the mirror instead of letting the browser fetch them from the library's cover supplier. Default `true`. Turning this off means the supplier sees one request per borrowed title from your IP address. The proxy follows at most one redirect, and only to `http`/`https`; addresses in the home network are allowed (e.g. a local cover proxy). Displays asking for the same cover at once cause one request to the supplier. |
 | `hideEmptyAccounts` | Hide accounts without loans and without errors. |
 | `logLevel` | Optional: `none`, `error`, `warn`, `info` or `debug`. All output goes through MagicMirror's `Log`, so the global `logLevel` in `config.js` decides (debug output such as session reuse and cover proxy failures needs `DEBUG` there); this option can only narrow it for this module. Unset means the global level alone. Applies per instance, also in the backend. Replaces the former `debug` option. |
 | `dateLocale` | Locale used for due-date formatting, e.g. `"de-DE"`. Unset (default) follows MagicMirror's `locale`, or its `language` when no locale is set. |
@@ -101,5 +101,6 @@ Adapters live in `lib/adapters/<name>/`. Each one exports `validateConfig`,
 `buildAccountUrl`, `resumeSession` and `login`, and is registered in
 `lib/adapters/index.js`. Adding a system means adding an adapter there; the
 frontend, the scheduler and the rendering layer stay unchanged, because every
-adapter returns the same normalised item shape (`title`, `dueDate`,
-`daysRemaining`, `isOverdue`, `status`).
+adapter returns the same normalised item shape (`title`, `type`, `status`,
+`dueDate` / `reservationDate` / `pickupDeadline`, `daysRemaining`, and optionally
+`author`, `format`, `branch`, `coverImageUrl`).

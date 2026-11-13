@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.9](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.8...v0.7.9) (2026-11-13)
+
+
+### 🐛 Fixes
+
+* translate the config mismatch notice, resolve accounts once per fetch ([#71](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/71)) ([23a2a19](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/23a2a19f0ca633b55b77b55f65101ac6576689e4))
+
+
+### ⚡ Performance
+
+* **cover-proxy:** fetch a cover once when several displays ask at once ([#70](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/70)) ([4dd163c](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/4dd163ccfb85821d9bf88c9664b036e5fb479b48))
+
+
+### 🔧 Maintenance
+
+* **deps:** bump lib/mmm-shared from `2117e40` to `f8223cd` ([#66](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/66)) ([f3eeec6](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/f3eeec62501ac66833e9e3e9fbafcf3fc30186a7))
+
 ## [0.7.8](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.7...v0.7.8) (2026-11-12)
 
 

@@ -244,3 +244,33 @@ test("the cover proxy follows at most one redirect, and only to http(s)", async 
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+test("simultaneous requests for one uncached cover cost the supplier one request", async () => {
+  const supplier = await startCountingSupplier();
+  const app = fakeExpressApp();
+  const proxy = createCoverProxy({ expressApp: app });
+  try {
+    const path = proxy.register(`${supplier.base}/same.png`);
+    const answers = await Promise.all([app.request(path), app.request(path), app.request(path)]);
+    assert.deepEqual(
+      answers.map((res) => res.statusCode),
+      [200, 200, 200],
+    );
+    assert.equal(supplier.hits.get("/same.png"), 1);
+  } finally {
+    await supplier.close();
+  }
+});
+
+test("a cover in the home network is served too (a local proxy or cover server is legitimate)", async () => {
+  // The supplier listens on 127.0.0.1: no address range is refused, only non-http(s) schemes.
+  const supplier = await startCountingSupplier();
+  const app = fakeExpressApp();
+  const proxy = createCoverProxy({ expressApp: app });
+  try {
+    const res = await app.request(proxy.register(`${supplier.base}/local.png`));
+    assert.equal(res.statusCode, 200);
+  } finally {
+    await supplier.close();
+  }
+});
