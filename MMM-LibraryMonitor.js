@@ -134,7 +134,7 @@ Module.register("MMM-LibraryMonitor", {
       if (payload.identifier === this.identifier || payload.identifier === "*") {
         this.sendConfigure();
         // A restarted backend has lost the paused state too.
-        this.lifecycle?.reportSessionState?.("init-required");
+        this.lifecycle.reportSessionState("init-required");
       }
       return;
     }
@@ -163,7 +163,7 @@ Module.register("MMM-LibraryMonitor", {
       this.progress = null;
       this.error =
         payload.action === "CONFIG_REJECTED"
-          ? `Config differs from the running instance: ${(payload.data?.mismatchKeys || []).join(", ")}`
+          ? this.translate("CONFIG_DIFFERS", { keys: (payload.data?.mismatchKeys || []).join(", ") })
           : this.resolveErrorMessage(payload?.error || payload);
       if (this.lastSuccessfulData) {
         this.accountData = this.lastSuccessfulData;
@@ -200,18 +200,15 @@ Module.register("MMM-LibraryMonitor", {
       return;
     }
 
-    // Stamp the day each fresh item arrived; a kept (stale) account keeps its own stamp.
     const receivedDay = this.todayUtc();
-    for (const fresh of accounts.filter((entry) => !this.isAccountUnavailable(entry))) {
-      for (const item of [...(fresh.items || []), ...(fresh.reservations || [])]) {
-        item.receivedDay = receivedDay;
-      }
-    }
-
+    const previousById = new Map((this.lastSuccessfulData?.accounts || []).map((account) => [account.id, account]));
     for (const [index, account] of accounts.entries()) {
       this.accountOrder.set(account.id, index);
     }
-    const merged = this.mergeWithPrevious(data, this.lastSuccessfulData);
+    const merged = this.withTotals(
+      data,
+      accounts.map((account) => this.mergeAccount(previousById.get(account.id), account, receivedDay)),
+    );
     this.error = null;
     this.accountData = merged;
     this.lastSuccessfulData = merged;
@@ -246,19 +243,7 @@ Module.register("MMM-LibraryMonitor", {
 
     const accounts = Array.isArray(this.accountData?.accounts) ? [...this.accountData.accounts] : [];
     const position = accounts.findIndex((entry) => entry.id === account.id);
-    const shown = position >= 0 ? accounts[position] : null;
-
-    let next = account;
-    if (this.isAccountUnavailable(account)) {
-      if (shown && !this.isAccountUnavailable(shown)) {
-        next = { ...shown, staleError: account.error };
-      }
-    } else {
-      const receivedDay = this.todayUtc();
-      for (const item of [...(account.items || []), ...(account.reservations || [])]) {
-        item.receivedDay = receivedDay;
-      }
-    }
+    const next = this.mergeAccount(position >= 0 ? accounts[position] : null, account, this.todayUtc());
 
     if (position >= 0) {
       accounts[position] = next;
@@ -293,30 +278,22 @@ Module.register("MMM-LibraryMonitor", {
   },
 
   /**
-   * Replace every account that refreshed successfully and keep the previous
-   * state of every account that did not, flagged with the refresh error.
-   * @param {object} data - Fresh payload
-   * @param {object|null} previous - Last displayed payload
-   * @returns {object} Payload to display
+   * What to show for one account after it refreshed. A fresh account replaces the shown one,
+   * its items stamped with the day they arrived (see daysRemaining). An unavailable one keeps
+   * what was shown, flagged with the refresh error - a kept account keeps its own stamps.
+   * @param {object|null|undefined} shown - The account as displayed so far
+   * @param {object} fresh - The account as the backend just sent it
+   * @param {number} receivedDay - todayUtc()
+   * @returns {object} The account to display
    */
-  mergeWithPrevious(data, previous) {
-    const previousById = new Map(
-      (Array.isArray(previous?.accounts) ? previous.accounts : [])
-        .filter((account) => !this.isAccountUnavailable(account))
-        .map((account) => [account.id, account]),
-    );
-
-    const fresh = Array.isArray(data?.accounts) ? data.accounts : [];
-    const accounts = fresh.map((account) => {
-      if (!this.isAccountUnavailable(account)) {
-        return account;
-      }
-
-      const kept = previousById.get(account.id);
-      return kept ? { ...kept, staleError: account.error } : account;
-    });
-
-    return this.withTotals(data, accounts);
+  mergeAccount(shown, fresh, receivedDay) {
+    if (this.isAccountUnavailable(fresh)) {
+      return shown && !this.isAccountUnavailable(shown) ? { ...shown, staleError: fresh.error } : fresh;
+    }
+    for (const item of [...(fresh.items || []), ...(fresh.reservations || [])]) {
+      item.receivedDay = receivedDay;
+    }
+    return fresh;
   },
 
   resolveErrorMessage(payload) {
@@ -351,13 +328,7 @@ Module.register("MMM-LibraryMonitor", {
       return wrapper;
     }
 
-    if (!this.accountData) {
-      wrapper.classList.add("dimmed", "light", "small");
-      wrapper.textContent = this.translate("NO_DATA");
-      return wrapper;
-    }
-
-    const accounts = Array.isArray(this.accountData.accounts) ? this.accountData.accounts : [];
+    const accounts = Array.isArray(this.accountData?.accounts) ? this.accountData.accounts : [];
     if (accounts.length === 0) {
       wrapper.classList.add("dimmed", "light", "small");
       wrapper.textContent = this.translate("NO_DATA");
@@ -385,7 +356,6 @@ Module.register("MMM-LibraryMonitor", {
     summary.textContent = this.buildOverallSummaryText(visibleAccounts, accounts);
     wrapper.appendChild(summary);
 
-    const accountSections = visibleAccounts.map((account, index) => this.createAccountSection(account, index));
     // An account error must stay visible even when nothing is on loan anywhere,
     // otherwise a failed login reads as "no items".
     if (!accounts.some((account) => this.hasSomethingToShow(account))) {
@@ -396,8 +366,8 @@ Module.register("MMM-LibraryMonitor", {
       return wrapper;
     }
 
-    accountSections.forEach((section) => {
-      wrapper.appendChild(section);
+    visibleAccounts.forEach((account, index) => {
+      wrapper.appendChild(this.createAccountSection(account, index));
     });
 
     return wrapper;

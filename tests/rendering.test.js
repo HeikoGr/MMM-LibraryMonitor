@@ -530,3 +530,17 @@ test("a single account shows no loading counter", () => {
   });
   assert.equal(module.progress, null);
 });
+
+test("a rejected config is reported in the display language", () => {
+  const de = require("../translations/de.json");
+  const { dom } = render((module) => {
+    module.translate = (key, vars = {}) => (de[key] || key).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? "");
+    module.socketNotificationReceived(module.notifications.EVENT, {
+      identifier: module.identifier,
+      action: "CONFIG_REJECTED",
+      data: { mismatchKeys: ["accounts"] },
+    });
+  });
+
+  assert.equal(dom.textContent, "Die Konfiguration weicht von der laufenden Instanz ab: accounts");
+});

@@ -101,5 +101,6 @@ Adapters live in `lib/adapters/<name>/`. Each one exports `validateConfig`,
 `buildAccountUrl`, `resumeSession` and `login`, and is registered in
 `lib/adapters/index.js`. Adding a system means adding an adapter there; the
 frontend, the scheduler and the rendering layer stay unchanged, because every
-adapter returns the same normalised item shape (`title`, `dueDate`,
-`daysRemaining`, `isOverdue`, `status`).
+adapter returns the same normalised item shape (`title`, `type`, `status`,
+`dueDate` / `reservationDate` / `pickupDeadline`, `daysRemaining`, and optionally
+`author`, `format`, `branch`, `coverImageUrl`).
