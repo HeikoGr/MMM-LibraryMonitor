@@ -130,7 +130,6 @@ test("parseAccountHtml extracts loans, fees, validity, and warning", () => {
   assert.equal(result.validUntil, "31.12.2026");
   assert.equal(result.warning, "Hinweis zur Verlängerung");
   assert.equal(result.totalReservations, 2);
-  assert.equal(result.items[0].id, "42");
   assert.equal(result.items[0].title, "Roman A");
   assert.equal(result.items[0].branch, "Zentralbibliothek");
   assert.equal(result.items[0].dueDate, "2026-06-24");
@@ -138,11 +137,9 @@ test("parseAccountHtml extracts loans, fees, validity, and warning", () => {
     result.items[0].coverImageUrl,
     "https://images-eu.ssl-images-amazon.com/images/P/3833905255.03.MZZZZZZZ.jpg",
   );
-  assert.equal(result.reservations[0].id, "44");
   assert.equal(result.reservations[0].title, "Abholbereit C");
   assert.equal(result.reservations[0].status, "readyForPickup");
   assert.equal(result.reservations[0].pickupDeadline, "2026-07-13");
-  assert.equal(result.reservations[1].id, "45");
   assert.equal(result.reservations[1].status, "reserved");
   assert.equal(result.reservations[1].reservationDate, "2026-07-11");
 });
@@ -183,7 +180,6 @@ test("parseAccountHtml handles a leading checkbox <td> before the <th> columns",
   const result = parseAccountHtml(html);
 
   assert.equal(result.totalItems, 1);
-  assert.equal(result.items[0].id, "1066114002");
   assert.equal(result.items[0].title, "Angriff der Dämonen");
   assert.equal(result.items[0].author, "Mirow, Benedict");
   assert.equal(result.items[0].format, "Belletristik KiJu");

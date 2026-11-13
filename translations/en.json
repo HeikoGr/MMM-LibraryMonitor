@@ -24,5 +24,6 @@
   "TABLE_CAPTION_LOANS": "Borrowed items with due dates",
   "TABLE_CAPTION_RESERVATIONS": "Reserved items",
   "STATUS_OVERDUE": "overdue",
-  "STATUS_DUE_SOON": "due soon"
+  "STATUS_DUE_SOON": "due soon",
+  "CONFIG_DIFFERS": "Config differs from the running instance: {keys}"
 }

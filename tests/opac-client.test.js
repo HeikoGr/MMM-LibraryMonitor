@@ -171,3 +171,31 @@ test("a trusted certificate without customssl stays silent", async (t) => {
   assert.equal(client.stats.probes, 1);
   assert.deepEqual(warnings, []);
 });
+
+test("account configs resolved by the caller are used as they are, not resolved again", async () => {
+  const client = require("../lib/opac-client");
+  client.clearSessions();
+  const adapter = {
+    buildAccountUrl: () => "https://opac.example/account",
+    resumeSession: async () => null,
+    login: async () => ({ items: [], totalItems: 0, reservations: [], totalReservations: 0 }),
+  };
+  const accountConfigs = [
+    {
+      id: "a1",
+      label: "",
+      requestTimeout: 1000,
+      credentials: { username: "u", password: "p" },
+      libraryConfig: { data: {} },
+      adapter,
+    },
+  ];
+
+  // The module config alone would not resolve (no library config): only the given list may be used.
+  const data = await client.fetchAccountData({}, { accountConfigs });
+
+  assert.deepEqual(
+    data.accounts.map((account) => [account.id, account.status]),
+    [["a1", "ok"]],
+  );
+});
