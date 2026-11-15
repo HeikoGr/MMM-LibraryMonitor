@@ -650,7 +650,9 @@ Module.register("MMM-LibraryMonitor", {
 
     const title = document.createElement("div");
     title.className = "mmm-library-monitor__title-text bright";
-    title.textContent = item.title;
+    title.textContent = item.volume
+      ? `${item.title} (${this.translate("VOLUME", { volume: item.volume })})`
+      : item.title;
     text.appendChild(title);
 
     if (item.status && item.status !== "loan") {
