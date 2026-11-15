@@ -544,3 +544,23 @@ test("a rejected config is reported in the display language", () => {
 
   assert.equal(dom.textContent, "Die Konfiguration weicht von der laufenden Instanz ab: accounts");
 });
+
+test("the volume of a series follows the title in the display language", () => {
+  const de = require("../translations/de.json");
+  const { dom } = render((module) => {
+    module.translate = (key, vars = {}) => (de[key] || key).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? "");
+    respond(
+      module,
+      payload([
+        account({
+          id: "a1",
+          items: [loan({ title: "Alea Aquarius", volume: "1" }), loan({ id: "l2", title: "Ohne Band", volume: "" })],
+          totalItems: 2,
+        }),
+      ]),
+    );
+  });
+
+  const titles = findAll(dom, "mmm-library-monitor__title-text").map((node) => node.textContent);
+  assert.deepEqual(titles, ["Alea Aquarius (Bd. 1)", "Ohne Band"]);
+});

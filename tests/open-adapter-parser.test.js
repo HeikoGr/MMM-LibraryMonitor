@@ -306,3 +306,44 @@ test("parseAccountHtml ignores hidden service messages", () => {
 
   assert.equal(result.warning, "");
 });
+
+test("parseAccountHtml moves the volume of a series out of the title", () => {
+  const row = (title) => `
+          <tr>
+            <td><input name="copy"></td>
+            <td></td>
+            <td><a href="/de-de/Mediensuche?id=1">${title}</a></td>
+            <td>Autorin</td>
+            <td>Belletristik KiJu</td>
+            <td>11.12.2026</td>
+            <td>Verlängerbar</td>
+          </tr>`;
+  const html = `
+    <html>
+      <body>
+        <table id="ctl00_tpnlLoans_ucLoansView_grdViewLoans">
+          <tr>
+            <td><input type="checkbox"></td>
+            <th abbr="Cover">Cover</th>
+            <th abbr="Titel"><a href="#">Titel</a></th>
+            <th abbr="Verfasser"><a href="#">Sort$Author</a></th>
+            <th abbr="Mediengruppe"><a href="#">Sort$MediaGroup</a></th>
+            <th abbr="Aktuelle Frist"><a href="#">Sort$DueDate</a></th>
+            <th abbr="Verlängerbar">Verlängerbar</th>
+          </tr>
+          ${row("1.; Alea Aquarius - der Ruf des Wassers")}
+          ${row("12. ;Die drei ??? Kids")}
+          ${row("Hilfe für die Welpen")}
+        </table>
+      </body>
+    </html>
+  `;
+
+  const titles = parseAccountHtml(html).items.map(({ title, volume }) => [title, volume]);
+
+  assert.deepEqual(titles.sort(), [
+    ["Alea Aquarius - der Ruf des Wassers", "1"],
+    ["Die drei ??? Kids", "12"],
+    ["Hilfe für die Welpen", ""],
+  ]);
+});
