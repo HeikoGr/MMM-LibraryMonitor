@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.9...v0.8.0) (2026-11-15)
+
+
+### 🔌 Features
+
+* show the series volume after the title ([#74](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/74)) ([3e31038](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/3e310383ba82a281a74d6ecb0cfc5e9d6f5c90b6))
+
+
+### 🔧 Maintenance
+
+* update mmm-shared and trust GitHub's published SSH host keys ([#75](https://github.com/HeikoGr/MMM-LibraryMonitor/issues/75)) ([3a7e9d6](https://github.com/HeikoGr/MMM-LibraryMonitor/commit/3a7e9d673d25a2d6c68274b36d63f1f54fd985cb))
+
 ## [0.7.9](https://github.com/HeikoGr/MMM-LibraryMonitor/compare/v0.7.8...v0.7.9) (2026-11-13)
 
 
