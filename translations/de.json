@@ -20,6 +20,7 @@
   "READY_FOR_PICKUP": "abholbereit",
   "READY_FOR_PICKUP_UNTIL": "abholbereit bis {date}",
   "MORE_ITEMS": "+{count} weitere",
+  "VOLUME": "Bd. {volume}",
   "STALE_DATA": "Letzter Stand – Aktualisierung fehlgeschlagen: {error}",
   "TABLE_CAPTION_LOANS": "Ausgeliehene Medien mit Leihfrist",
   "TABLE_CAPTION_RESERVATIONS": "Vorgemerkte Medien",

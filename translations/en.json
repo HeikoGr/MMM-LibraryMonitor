@@ -20,6 +20,7 @@
   "READY_FOR_PICKUP": "ready for pickup",
   "READY_FOR_PICKUP_UNTIL": "ready until {date}",
   "MORE_ITEMS": "+{count} more",
+  "VOLUME": "vol. {volume}",
   "STALE_DATA": "Showing last known data – refresh failed: {error}",
   "TABLE_CAPTION_LOANS": "Borrowed items with due dates",
   "TABLE_CAPTION_RESERVATIONS": "Reserved items",
